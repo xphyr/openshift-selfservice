@@ -1,0 +1,32 @@
+{
+  "name": "openshift-selfservice-server",
+  "version": "1.0.0",
+  "description": "OpenShift Selfservice Server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oscp/openshift-selfservice.git"
+  },
+  "keywords": [
+    "OpenShift"
+  ],
+  "author": "Reto Lehmann (reto.lehmann@me.com)",
+  "license": "APACHE",
+  "bugs": {
+    "url": "https://github.com/oscp/openshift-selfservice/issues"
+  },
+  "homepage": "https://github.com/oscp/openshift-selfservice#readme",
+  "dependencies": {
+    "body-parser": "^1.16.0",
+    "connect-flash": "^0.1.1",
+    "cookie-parser": "^1.4.3",
+    "ejs": "^2.5.5",
+    "express": "^4.14.1",
+    "express-session": "^1.15.0",
+    "passport": "^0.3.2",
+    "passport-ldapauth": "^1.0.0"
+  }
+}
