@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+    <title>OpenShift Selfservice Portal</title>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css">
+    <style>
+        body {
+            padding-top: 80px;
+        }
+    </style>
+</head>
+<% include navbar %>
+<body>
+<div class="container">
+
+<% if (locals.message && message.length > 0) { %>
+    <div class="alert alert-success"><%= message %></div>
+<% } if (locals.error && error.length > 0) { %>
+    <div class="alert alert-danger"><%= error %></div>
+<% } if (locals.info && info.length > 0) { %>
+    <div class="alert alert-info"><%= info %></div>
+<% } %>
