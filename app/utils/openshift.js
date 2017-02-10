@@ -36,11 +36,17 @@ exports.checkPermissions = function (username, project) {
             console.error(`User ${username} cannot edit project ${project} as he has no admin rights`);
             throw new Error('Du hast auf dem Projekt keine Admin-Rechte!');
         }
-
     })
+    .catch(err => {
+        throw err
+    });
 }
 
 exports.updateProjectQuota = function (username, project, cpu, memory) {
+    if (project.length === 0) {
+        throw new Error('Projektname muss angegeben werden');
+    }
+
     if (cpu > MAX_CPU) {
         throw new Error(`Es können maximal ${MAX_CPU} CPU Cores vergeben werden.`);
     }
@@ -48,8 +54,6 @@ exports.updateProjectQuota = function (username, project, cpu, memory) {
     if (memory > MAX_MEMORY) {
         throw new Error(`Es können maximal ${MAX_MEMORY}GB Memory vergeben werden.`);
     }
-
-    console.log('Updating quotas for ', project, cpu, memory);
 
     // Get existing quota
     return rp(this.getHttpOpts(`${OSE_API}/api/v1/namespaces/${project}/resourcequotas`)).then(res => {
@@ -64,9 +68,9 @@ exports.updateProjectQuota = function (username, project, cpu, memory) {
         httpOpts.body = quota;
 
         return rp(httpOpts).then(() => {
+            console.log(`User ${username} changed quotas for project ${project}. CPU: ${cpu}, Mem: ${memory}`);
             return "ok";
         }, (err) => {
-            debugger;
             console.error(err);
             return "nok";
         });

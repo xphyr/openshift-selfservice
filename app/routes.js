@@ -2,9 +2,6 @@ const quotas = require('./controllers/quotas');
 
 module.exports = function (app, passport) {
     let isAuthenticated = function (req, res, next) {
-        // Todo: REMOVE THIS
-        return next();
-
         if (req.isAuthenticated()) {
             return next();
         }

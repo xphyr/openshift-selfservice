@@ -21,6 +21,7 @@
   "homepage": "https://github.com/oscp/openshift-selfservice#readme",
   "dependencies": {
     "body-parser": "^1.16.0",
+    "co": "^4.6.0",
     "connect-flash": "^0.1.1",
     "cookie-parser": "^1.4.3",
     "ejs": "^2.5.5",
