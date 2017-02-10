@@ -8,15 +8,15 @@
 <form action="/quotas" method="post">
     <div class="form-group">
         <label for="projectname">Projektname</label>
-        <input type="text" class="form-control" id="projectname" name="projectname" placeholder="projektname-dev">
+        <input type="text" class="form-control" required id="projectname" name="projectname" placeholder="projektname-dev">
     </div>
     <div class="form-group">
         <label for="cpu">Neue CPU Quotas [Cores]</label>
-        <input type="text" class="form-control" id="cpu" name="cpu" placeholder="2">
+        <input type="number" min="0" class="form-control" required id="cpu" name="cpu" value="2">
     </div>
     <div class="form-group">
         <label for="memory">Neue Memory Quotas [GB]</label>
-        <input type="text" class="form-control" id="memory" name="memory" placeholder="4">
+        <input type="number" min="0" class="form-control" required id="memory" name="memory" value="4">
     </div>
     <button type="submit" class="btn btn-primary">Quotas anwenden</button>
 </form>

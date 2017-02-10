@@ -2,6 +2,9 @@ const quotas = require('./controllers/quotas');
 
 module.exports = function (app, passport) {
     let isAuthenticated = function (req, res, next) {
+        // Todo: REMOVE THIS
+        return next();
+
         if (req.isAuthenticated()) {
             return next();
         }
@@ -9,11 +12,11 @@ module.exports = function (app, passport) {
     }
 
     app.get('/', isAuthenticated, (req, res) => {
-        res.render('index.ejs', {message: req.flash('message')});
+        res.render('index.ejs');
     });
 
     app.get('/login', (req, res) => {
-        res.render('login.ejs', {message: req.flash('error')});
+        res.render('login.ejs', {messages: req.flash('errors')});
     });
 
     app.get('/logout', (req, res) => {

@@ -14,10 +14,10 @@
 <body>
 <div class="container">
 
-<% if (locals.message && message.length > 0) { %>
-    <div class="alert alert-success"><%= message %></div>
-<% } if (locals.error && error.length > 0) { %>
-    <div class="alert alert-danger"><%= error %></div>
-<% } if (locals.info && info.length > 0) { %>
+<% if (locals.messages && messages.length > 0) { %>
+    <div class="alert alert-success"><%= messages %></div>
+<% } if (locals.errors && errors.length > 0) { %>
+    <div class="alert alert-danger"><%= errors %></div>
+<% } if (locals.infos && infos.length > 0) { %>
     <div class="alert alert-info"><%= info %></div>
 <% } %>
