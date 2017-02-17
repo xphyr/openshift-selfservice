@@ -104,19 +104,45 @@ exports.newProject = function (username, project, megaId, billing) {
         console.log(`User ${username} created a new project: ${project}`);
         return Promise.resolve();
     })
-                          .then(() => this.changePermissions(project, username))
-                          .then(() => this.updateMetadata(project, billing, megaId, username))
-                          .catch(err => {
-                              console.error('Error occured while creating project: ', err.message);
-                              if (err.statusCode === 409) {
-                                  return Promise.reject('Das Projekt existiert bereits');
-                              }
+    .then(() => this.changePermissions(project, username))
+    .then(() => this.updateMetadata(project, billing, megaId, username))
+    .catch(err => {
+        console.error('Error occured while creating project: ', err.message);
+        if (err.statusCode === 409) {
+            return Promise.reject('Das Projekt existiert bereits');
+        }
 
-                              return Promise.reject(err);
-                          })
+        return Promise.reject(err);
+    })
 };
 
-exports.updateBilling = function(username, project, billing) {
+exports.newServiceAccount = function (username, project, serviceAccount) {
+    if (project.isEmpty()) {
+        throw new Error('Projektname muss angegeben werden');
+    }
+
+    if (serviceAccount.isEmpty()) {
+        throw new Error('Service-Account-Name muss angegeben werden');
+    }
+
+    let httpOptions = this.getHttpOpts(`${OSE_API}/api/v1/namespaces/${project}/serviceaccounts`);
+    httpOptions.method = 'POST';
+    httpOptions.body = {
+        "kind": "ServiceAccount", "apiVersion": "v1", "metadata": {
+            "name": serviceAccount
+        }
+    };
+    return rp(httpOptions).then(() => {
+        console.log(`User ${username} has created a serviceAccount for project ${project}. Name: ${serviceAccount}`);
+        return Promise.resolve();
+    })
+    .catch(err => {
+        console.log('Error while creating serviceAccount for project: ', err.message);
+        return Promise.reject(err);
+    });
+};
+
+exports.updateBilling = function (username, project, billing) {
     if (project.isEmpty()) {
         throw new Error('Projektname muss angegeben werden');
     }
@@ -126,7 +152,6 @@ exports.updateBilling = function(username, project, billing) {
     }
 
     return this.updateMetadata(project, billing, null, username);
-
 };
 
 exports.updateMetadata = function (project, billing, megaId, username) {
@@ -147,10 +172,10 @@ exports.updateMetadata = function (project, billing, megaId, username) {
             console.log(`User ${username} changed metadata of project ${project}. Billing: ${billing}, MEGA-ID: ${megaId}`);
             return Promise.resolve();
         })
-                           .catch(err => {
-                               console.log('Error while updating project metadata: ', err.message);
-                               return Promise.reject(err);
-                           });
+        .catch(err => {
+            console.log('Error while updating project metadata: ', err.message);
+            return Promise.reject(err);
+        });
     })
 };
 
@@ -178,9 +203,9 @@ exports.changePermissions = function (project, username) {
             console.log(`User ${username} is now admin of project ${project}`);
             return Promise.resolve();
         })
-                           .catch(err => {
-                               console.log('Error while chaning admin permissions: ', err.message);
-                               return Promise.reject(err);
-                           });
+        .catch(err => {
+            console.log('Error while chaning admin permissions: ', err.message);
+            return Promise.reject(err);
+        });
     });
 };

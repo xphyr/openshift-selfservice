@@ -39,6 +39,12 @@ module.exports = function (app, passport) {
 
     app.post('/updatebilling', isAuthenticated, controllers.updateBilling);
 
+    app.get('/newserviceaccount', isAuthenticated, (req, res) => {
+        res.render('newserviceaccount.ejs');
+    });
+
+    app.post('/newserviceaccount', isAuthenticated, controllers.newServiceAccount);
+
     app.post('/login', passport.authenticate('ldapauth', {
         session: true, successRedirect: '/', failureRedirect: '/login', failureFlash: true
     }));

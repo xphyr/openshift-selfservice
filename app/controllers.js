@@ -24,6 +24,18 @@ exports.newProject = (req, res) => {
     .catch(err => handleError(err, 'newproject.ejs', res));
 };
 
+exports.newServiceAccount = (req, res) => {
+    co (function*() {
+        yield openshift.checkPermissions(req.user.cn, req.body.project);
+        yield openshift.newServiceAccount(req.user.cn, req.body.project, req.body.serviceaccount);
+
+        res.render('newserviceaccount.ejs', {
+            messages: 'Service-Account wurde erfolgreich angelegt'
+        });
+    })
+    .catch(err => handleError(err, 'newserviceaccount.ejs', res));
+};
+
 exports.updateBilling = (req, res) => {
     co (function*() {
         yield openshift.checkPermissions(req.user.cn, req.body.project);
@@ -42,7 +54,6 @@ handleError = function(err, page, res){
             errors: err
         });
     } else {
-        console.error(err);
         res.render(page, {
             errors: 'Es ist ein Fehler aufgetreten.'
         });
