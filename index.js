@@ -15,7 +15,7 @@ let OPTS = {
 
 let app = express();
 app.use(cookieParser());
-app.use(session({secret: process.env.SESSION_SECRET}));
+app.use(session({secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false}));
 
 passport.use(new LdapStrategy(OPTS));
 app.use(passport.initialize());

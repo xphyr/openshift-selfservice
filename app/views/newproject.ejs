@@ -1,0 +1,24 @@
+<% include header %>
+
+<div class="jumbotron">
+    <h1><span class="fa fa-lock"></span> OpenShift Projekt anlegen</h1>
+    <p>Hier kannst du ein OpenShift Projekt erstellen</p>
+</div>
+
+<form action="/newproject" method="post">
+    <div class="form-group">
+        <label for="name">Projektname</label>
+        <input type="text" class="form-control" required id="name" name="name" placeholder="projektname-dev">
+    </div>
+    <div class="form-group">
+        <label for="billing">Kontierungselement</label>
+        <input type="text" class="form-control" required id="billing" name="billing">
+    </div>
+    <div class="form-group">
+        <label for="megaid">MEGA-ID</label>
+        <input type="text" class="form-control" id="megaid" name="megaid">
+    </div>
+    <button type="submit" class="btn btn-primary">Projekt erstellen</button>
+</form>
+
+<% include footer %>
