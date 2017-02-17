@@ -17,9 +17,8 @@ exports.getHttpOpts = function (uri) {
 exports.checkPermissions = function (username, project) {
     return rp(this.getHttpOpts(`${OSE_API}/oapi/v1/namespaces/${project}/policybindings/:default/`))
     .then(res => {
-        let isAdmin = false;
-
         // Check if a User is admin
+        let isAdmin = false;
         if (res && res.roleBindings) {
             res.roleBindings.forEach(rb => {
                 if (rb.name === 'admin') {
@@ -34,11 +33,14 @@ exports.checkPermissions = function (username, project) {
 
         if (!isAdmin) {
             console.error(`User ${username} cannot edit project ${project} as he has no admin rights`);
-            throw new Error('Du hast auf dem Projekt keine Admin-Rechte!');
+            return Promise.reject('Du hast auf dem Projekt keine Admin-Rechte');
         }
     })
-    .catch(err => {
-        throw err
+    .catch((err) => {
+        if (typeof err === 'string') {
+            throw new Error(err);
+        }
+        throw new Error('Projekt konnte nicht gefunden werden');
     });
 }
 
@@ -68,11 +70,12 @@ exports.updateProjectQuota = function (username, project, cpu, memory) {
         httpOpts.body = quota;
 
         return rp(httpOpts).then(() => {
-            console.log(`User ${username} changed quotas for project ${project}. CPU: ${cpu}, Mem: ${memory}`);
-            return "ok";
+            console.log(
+            `User ${username} changed quotas for project ${project}. CPU: ${cpu}, Mem: ${memory}`);
+            return Promise.resolve();
         }, (err) => {
             console.error(err);
-            return "nok";
+            return Promise.reject(err);
         });
     });
 };
