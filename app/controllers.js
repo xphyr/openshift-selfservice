@@ -15,13 +15,25 @@ exports.updateQuota = (req, res) => {
 
 exports.newProject = (req, res) => {
     co (function*() {
-        yield openshift.newProject("u220374", req.body.name, req.body.megaid, req.body.billing);
+        yield openshift.newProject(req.user.cn, req.body.project, req.body.megaid, req.body.billing);
 
         res.render('newproject.ejs', {
             messages: 'Projekt wurde erfolgreich angelegt'
         });
     })
     .catch(err => handleError(err, 'newproject.ejs', res));
+};
+
+exports.updateBilling = (req, res) => {
+    co (function*() {
+        yield openshift.checkPermissions(req.user.cn, req.body.project);
+        yield openshift.updateBilling(req.user.cn, req.body.project, req.body.billing);
+
+        res.render('updatebilling.ejs', {
+            messages: 'Kontierungsnummer wurde erfolgreich angepasst'
+        });
+    })
+    .catch(err => handleError(err, 'updatebilling.ejs', res));
 };
 
 handleError = function(err, page, res){

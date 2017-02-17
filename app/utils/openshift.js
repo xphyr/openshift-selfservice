@@ -45,6 +45,7 @@ exports.checkPermissions = function (username, project) {
         if (typeof err === 'string') {
             throw new Error(err);
         }
+        console.error(err.message);
         throw new Error('Projekt konnte nicht gefunden werden');
     });
 };
@@ -83,12 +84,12 @@ exports.updateProjectQuota = function (username, project, cpu, memory) {
     });
 };
 
-exports.newProject = function (username, projectName, megaId, billingNr) {
-    if (projectName.isEmpty()) {
+exports.newProject = function (username, project, megaId, billing) {
+    if (project.isEmpty()) {
         throw new Error('Projektname muss angegeben werden');
     }
 
-    if (billingNr.isEmpty()) {
+    if (billing.isEmpty()) {
         throw new Error('Kontierungsnummer muss angegeben werden');
     }
 
@@ -96,15 +97,15 @@ exports.newProject = function (username, projectName, megaId, billingNr) {
     httpOpts.method = 'POST';
     httpOpts.body = {
         'kind': 'ProjectRequest', 'apiVersion': 'v1', 'metadata': {
-            'name': projectName
+            'name': project
         }
     };
     return rp(httpOpts).then(() => {
-        console.log(`User ${username} created a new project: ${projectName}`);
+        console.log(`User ${username} created a new project: ${project}`);
         return Promise.resolve();
     })
-                          .then(() => this.changePermissions(projectName, username))
-                          .then(() => this.updateMetadata(projectName, billingNr, megaId, username))
+                          .then(() => this.changePermissions(project, username))
+                          .then(() => this.updateMetadata(project, billing, megaId, username))
                           .catch(err => {
                               console.error('Error occured while creating project: ', err.message);
                               if (err.statusCode === 409) {
@@ -113,6 +114,19 @@ exports.newProject = function (username, projectName, megaId, billingNr) {
 
                               return Promise.reject(err);
                           })
+};
+
+exports.updateBilling = function(username, project, billing) {
+    if (project.isEmpty()) {
+        throw new Error('Projektname muss angegeben werden');
+    }
+
+    if (billing.isEmpty()) {
+        throw new Error('Kontierungsnummer muss angegeben werden');
+    }
+
+    return this.updateMetadata(project, billing, null, username);
+
 };
 
 exports.updateMetadata = function (project, billing, megaId, username) {

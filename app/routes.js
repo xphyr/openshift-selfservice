@@ -2,7 +2,6 @@ const controllers = require('./controllers');
 
 module.exports = function (app, passport) {
     let isAuthenticated = function (req, res, next) {
-        return next();
         if (req.isAuthenticated()) {
             return next();
         }
@@ -28,11 +27,17 @@ module.exports = function (app, passport) {
 
     app.post('/quotas', isAuthenticated, controllers.updateQuota);
 
-    app.get('/newproject', (req, res) => {
+    app.get('/newproject', isAuthenticated, (req, res) => {
         res.render('newproject.ejs');
     });
 
-    app.post('/newproject', controllers.newProject);
+    app.post('/newproject', isAuthenticated, controllers.newProject);
+
+    app.get('/updatebilling', isAuthenticated, (req, res) => {
+        res.render('updatebilling.ejs');
+    });
+
+    app.post('/updatebilling', isAuthenticated, controllers.updateBilling);
 
     app.post('/login', passport.authenticate('ldapauth', {
         session: true, successRedirect: '/', failureRedirect: '/login', failureFlash: true

@@ -1,11 +1,11 @@
 <% include header %>
 
 <div class="jumbotron">
-    <h1><span class="fa fa-lock"></span> OpenShift Projekt anlegen</h1>
-    <p>Hier kannst du ein OpenShift Projekt erstellen</p>
+    <h1><span class="fa fa-lock"></span> Kontierungsnummer anpassen</h1>
+    <p>Hier kannst du die Kontierungsnummer deines OpenShift Projekts anpassen</p>
 </div>
 
-<form action="/newproject" method="post">
+<form action="/updatebilling" method="post">
     <div class="form-group">
         <label for="project">Projektname</label>
         <input type="text" class="form-control" required id="project" name="project" placeholder="projektname-dev">
@@ -14,11 +14,7 @@
         <label for="billing">Kontierungselement</label>
         <input type="text" class="form-control" required id="billing" name="billing">
     </div>
-    <div class="form-group">
-        <label for="megaid">MEGA-ID</label>
-        <input type="text" class="form-control" id="megaid" name="megaid">
-    </div>
-    <button type="submit" class="btn btn-primary">Projekt erstellen</button>
+    <button type="submit" class="btn btn-primary">Kontierungsinformation anpassen</button>
 </form>
 
 <% include footer %>
