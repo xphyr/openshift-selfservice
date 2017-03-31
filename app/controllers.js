@@ -49,9 +49,9 @@ exports.updateBilling = (req, res) => {
 };
 
 handleError = function(err, page, res){
-    if (typeof err == 'string') {
+    if (typeof err.message == 'string') {
         res.render(page, {
-            errors: err
+            errors: err.message
         });
     } else {
         res.render(page, {
