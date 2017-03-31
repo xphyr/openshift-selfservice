@@ -84,13 +84,18 @@ exports.updateProjectQuota = function (username, project, cpu, memory) {
     });
 };
 
-exports.newProject = function (username, project, megaId, billing) {
-    if (project.isEmpty()) {
+exports.newProject = function (username, project, isTestproject, megaId, billing) {
+    if (!isTestproject && project.isEmpty()) {
         throw new Error('Projektname muss angegeben werden');
     }
 
-    if (billing.isEmpty()) {
+    if (!isTestproject && billing.isEmpty()) {
         throw new Error('Kontierungsnummer muss angegeben werden');
+    }
+
+    // Always format project name like this: username-project
+    if (isTestproject) {
+        project = `${username}-${project}`;
     }
 
     let httpOpts = this.getHttpOpts(`${OSE_API}/oapi/v1/projectrequests`);
@@ -105,7 +110,7 @@ exports.newProject = function (username, project, megaId, billing) {
         return Promise.resolve();
     })
     .then(() => this.changePermissions(project, username))
-    .then(() => this.updateMetadata(project, billing, megaId, username))
+    .then(() => this.updateMetadata(isTestproject, project, billing, megaId, username))
     .catch(err => {
         console.error('Error occured while creating project: ', err.message);
         if (err.statusCode === 409) {
@@ -151,10 +156,14 @@ exports.updateBilling = function (username, project, billing) {
         throw new Error('Kontierungsnummer muss angegeben werden');
     }
 
-    return this.updateMetadata(project, billing, null, username);
+    return this.updateMetadata(false, project, billing, null, username);
 };
 
-exports.updateMetadata = function (project, billing, megaId, username) {
+exports.updateMetadata = function (isTestproject, project, billing, megaId, username) {
+    if (isTestproject) {
+        return;
+    }
+
     let url = `${OSE_API}/api/v1/namespaces/${project}`;
     return rp(this.getHttpOpts(url))
     .then(res => {

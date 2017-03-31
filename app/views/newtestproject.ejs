@@ -1,0 +1,27 @@
+<% include header %>
+
+<div class="jumbotron">
+    <h1><span class="fa fa-lock"></span> OpenShift Test-Projekt anlegen</h1>
+    <p>Hier kannst du ein OpenShift Test-Projekt erstellen</p>
+</div>
+
+<div class="alert alert-info">
+    - Du kannst jederzeit ein Testprojekt erstellen um etwas auszuprobieren. Es entstehen keine Kosten.<br/>
+    - Ein Test-Projekt enthält deine u-Nummer<br/>
+    - Pods aus einem Test-Projekt können jederzeit durch das Cloud-Team gestoppt werden<br/>
+    - Bitte das Testprojekt nach Testende selber löschen<br/>
+    - Nicht gelöschte Testprojekte werden durch das Cloud-Team gelöscht<br/>
+</div>
+
+<form action="/newtestproject" method="post">
+    <div class="form-group">
+        <label for="project">Projektname</label>
+        <div class="input-group">
+            <span class="input-group-addon" id="basic-addon1"><%= username %>-</span>
+            <input type="text" class="form-control" required id="project" name="project" placeholder="testprojekt">
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Test-Projekt erstellen</button>
+</form>
+
+<% include footer %>

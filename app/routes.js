@@ -33,6 +33,12 @@ module.exports = function (app, passport) {
 
     app.post('/newproject', isAuthenticated, controllers.newProject);
 
+    app.get('/newtestproject', isAuthenticated, (req, res) => {
+        res.render('newtestproject.ejs', { username: req.user.cn });
+    });
+
+    app.post('/newtestproject', isAuthenticated, controllers.newTestProject);
+
     app.get('/updatebilling', isAuthenticated, (req, res) => {
         res.render('updatebilling.ejs');
     });
