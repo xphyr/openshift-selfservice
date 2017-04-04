@@ -98,6 +98,7 @@ exports.newProject = function (username, project, isTestproject, megaId, billing
     // Always format project name like this: username-project
     if (isTestproject) {
         project = `${username}-${project}`;
+        billing = 'keine-verrechnung';
     }
 
     let httpOpts = this.getHttpOpts(`${OSE_API}/oapi/v1/projectrequests`);
@@ -112,11 +113,11 @@ exports.newProject = function (username, project, isTestproject, megaId, billing
         return Promise.resolve();
     })
     .then(() => this.changePermissions(project, username))
-    .then(() => this.updateMetadata(isTestproject, project, billing, megaId, username))
+    .then(() => this.updateMetadata(project, billing, megaId, username))
     .catch(err => {
         console.error('Error occured while creating project: ', err.message);
         if (err.statusCode === 409) {
-            return Promise.reject('Das Projekt existiert bereits');
+            return Promise.reject(new SSPError('Das Projekt existiert bereits'));
         }
 
         return Promise.reject(err);
@@ -158,14 +159,10 @@ exports.updateBilling = function (username, project, billing) {
         throw new SSPError('Kontierungsnummer muss angegeben werden');
     }
 
-    return this.updateMetadata(false, project, billing, null, username);
+    return this.updateMetadata(project, billing, null, username);
 };
 
-exports.updateMetadata = function (isTestproject, project, billing, megaId, username) {
-    if (isTestproject) {
-        return;
-    }
-
+exports.updateMetadata = function (project, billing, megaId, username) {
     let url = `${OSE_API}/api/v1/namespaces/${project}`;
     return rp(this.getHttpOpts(url))
     .then(res => {

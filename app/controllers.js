@@ -1,6 +1,6 @@
 let co = require('co');
 let openshift = require('./utils/openshift');
-
+let SSPError = require('./utils/ssp-error');
 
 exports.updateQuota = (req, res) => {
     co(function*() {
@@ -64,8 +64,8 @@ exports.updateBilling = (req, res) => {
 };
 
 handleError = function (err, page, res, req) {
-    console.error(err);
-    if (typeof err.name === 'SSPError') {
+    console.error(err, err.name);
+    if (err.name === 'SSPError') {
         res.render(page, {
             username: req.user.cn, errors: err.message
         });
