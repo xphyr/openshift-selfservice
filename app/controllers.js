@@ -1,6 +1,7 @@
 let co = require('co');
 let openshift = require('./utils/openshift');
 
+
 exports.updateQuota = (req, res) => {
     co(function*() {
         yield openshift.checkPermissions(req.user.cn, req.body.project);
@@ -64,7 +65,7 @@ exports.updateBilling = (req, res) => {
 
 handleError = function (err, page, res, req) {
     console.error(err);
-    if (typeof err.message == 'string') {
+    if (typeof err.name === 'SSPError') {
         res.render(page, {
             username: req.user.cn, errors: err.message
         });

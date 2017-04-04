@@ -6,6 +6,8 @@ let OSE_TOKEN = process.env.OPENSHIFT_TOKEN;
 let MAX_CPU = process.env.MAX_CPU;
 let MAX_MEMORY = process.env.MAX_MEMORY;
 
+let SSPError = require('./ssp-error');
+
 // Add helpful things :)
 String.prototype.isEmpty = function () {
     return (this.length === 0 || !this.trim());
@@ -43,24 +45,24 @@ exports.checkPermissions = function (username, project) {
     })
     .catch((err) => {
         if (typeof err === 'string') {
-            throw new Error(err);
+            throw new SSPError(err);
         }
         console.error(err.message);
-        throw new Error('Projekt konnte nicht gefunden werden');
+        throw new SSPError('Projekt konnte nicht gefunden werden');
     });
 };
 
 exports.updateProjectQuota = function (username, project, cpu, memory) {
     if (project.isEmpty()) {
-        throw new Error('Projektname muss angegeben werden');
+        throw new SSPError('Projektname muss angegeben werden');
     }
 
     if (cpu > MAX_CPU) {
-        throw new Error(`Es können maximal ${MAX_CPU} CPU Cores vergeben werden.`);
+        throw new SSPError(`Es können maximal ${MAX_CPU} CPU Cores vergeben werden.`);
     }
 
     if (memory > MAX_MEMORY) {
-        throw new Error(`Es können maximal ${MAX_MEMORY}GB Memory vergeben werden.`);
+        throw new SSPError(`Es können maximal ${MAX_MEMORY}GB Memory vergeben werden.`);
     }
 
     // Get existing quota
@@ -86,11 +88,11 @@ exports.updateProjectQuota = function (username, project, cpu, memory) {
 
 exports.newProject = function (username, project, isTestproject, megaId, billing) {
     if (!isTestproject && project.isEmpty()) {
-        throw new Error('Projektname muss angegeben werden');
+        throw new SSPError('Projektname muss angegeben werden');
     }
 
     if (!isTestproject && billing.isEmpty()) {
-        throw new Error('Kontierungsnummer muss angegeben werden');
+        throw new SSPError('Kontierungsnummer muss angegeben werden');
     }
 
     // Always format project name like this: username-project
@@ -123,11 +125,11 @@ exports.newProject = function (username, project, isTestproject, megaId, billing
 
 exports.newServiceAccount = function (username, project, serviceAccount) {
     if (project.isEmpty()) {
-        throw new Error('Projektname muss angegeben werden');
+        throw new SSPError('Projektname muss angegeben werden');
     }
 
     if (serviceAccount.isEmpty()) {
-        throw new Error('Service-Account-Name muss angegeben werden');
+        throw new SSPError('Service-Account-Name muss angegeben werden');
     }
 
     let httpOptions = this.getHttpOpts(`${OSE_API}/api/v1/namespaces/${project}/serviceaccounts`);
@@ -149,11 +151,11 @@ exports.newServiceAccount = function (username, project, serviceAccount) {
 
 exports.updateBilling = function (username, project, billing) {
     if (project.isEmpty()) {
-        throw new Error('Projektname muss angegeben werden');
+        throw new SSPError('Projektname muss angegeben werden');
     }
 
     if (billing.isEmpty()) {
-        throw new Error('Kontierungsnummer muss angegeben werden');
+        throw new SSPError('Kontierungsnummer muss angegeben werden');
     }
 
     return this.updateMetadata(false, project, billing, null, username);
