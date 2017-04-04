@@ -113,7 +113,7 @@ exports.newProject = function (username, project, isTestproject, megaId, billing
         return Promise.resolve();
     })
     .then(() => this.changePermissions(project, username))
-    .then(() => this.updateMetadata(project, billing, megaId, username))
+    .then(() => this.createOrUpdateMetadata(project, billing, megaId, username))
     .catch(err => {
         console.error('Error occured while creating project: ', err.message);
         if (err.statusCode === 409) {
@@ -159,14 +159,13 @@ exports.updateBilling = function (username, project, billing) {
         throw new SSPError('Kontierungsnummer muss angegeben werden');
     }
 
-    return this.updateMetadata(project, billing, null, username);
+    return this.createOrUpdateMetadata(project, billing, null, username);
 };
 
-exports.updateMetadata = function (project, billing, megaId, username) {
+exports.createOrUpdateMetadata = function (project, billing, megaId, username) {
     let url = `${OSE_API}/api/v1/namespaces/${project}`;
     return rp(this.getHttpOpts(url))
     .then(res => {
-
         // Update metadata
         res.metadata.annotations['openshift.io/kontierung-element'] = billing;
         if (megaId) {
