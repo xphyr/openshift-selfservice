@@ -8,6 +8,7 @@ import {throwIfAlreadyLoaded} from './module-import-guard';
 import {NavComponent} from './nav/nav.component';
 import {AuthService} from "./auth/auth.service";
 import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
+import {CanActivateViaAuthGuard} from "./auth/auth.guard";
 
 @NgModule({
   imports: [
@@ -17,7 +18,7 @@ import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
     RouterModule,
     BrowserAnimationsModule
   ],
-  providers: [AuthService],
+  providers: [AuthService, CanActivateViaAuthGuard],
   declarations: [NavComponent],
   exports: [NavComponent, FormsModule, BrowserAnimationsModule]
 })

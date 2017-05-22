@@ -16,9 +16,9 @@ import { HomeComponent } from './home/home.component';
   ],
   imports: [
     BrowserModule,
-    routing,
     CoreModule,
-    SimpleNotificationsModule.forRoot()
+    SimpleNotificationsModule.forRoot(),
+    routing
   ],
   providers: [],
   bootstrap: [AppComponent]

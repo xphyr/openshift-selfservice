@@ -17,15 +17,15 @@ func main() {
 	auth := router.Group("/auth")
 	auth.Use(authMiddleware.MiddlewareFunc())
 	{
-		auth.GET("/hello", echo)
+		auth.GET("/check_token", checkTokenHandler)
 		auth.GET("/refresh_token", authMiddleware.RefreshHandler)
 	}
 
 	router.Run()
 }
 
-func echo(c *gin.Context) {
-	c.String(http.StatusOK, "Hello World")
+func checkTokenHandler(c *gin.Context) {
+	c.String(http.StatusOK, "{\"status\": \"OK\"}")
 }
 
 //func ldapFunc() {
