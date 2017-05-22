@@ -2,3 +2,7 @@
 body {
   padding-top: 80px;
 }
+
+.simple-notification-wrapper {
+  z-index: 1030 !important;
+}

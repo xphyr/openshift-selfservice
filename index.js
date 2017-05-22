@@ -42,5 +42,5 @@ app.set('views', __dirname + '/app/views');
 
 require('./app/routes.js')(app, passport);
 
-app.listen(8080);
-console.log('Server running on port 8080');
+app.listen(8081);
+console.log('Server running on port 8081');

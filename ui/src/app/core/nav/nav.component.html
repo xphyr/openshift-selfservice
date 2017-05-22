@@ -16,7 +16,8 @@
           </ul>
         </li>
       </ul>
-      <ul class="nav navbar-nav navbar-right">
+      <ul class="nav navbar-nav navbar-right" *ngIf="authService.userData.id">
+        <li><a href="#">Hallo {{ authService.userData.id }}</a></li>
       </ul>
     </div>
   </div>

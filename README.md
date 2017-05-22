@@ -84,5 +84,7 @@ LDAP\_BIND\_DN|LDAP Bind|cn=root
 LDAP\_BIND\_CRED|LDAP Credentials|secret
 LDAP\_SEARCH\_BASE|LDAP Search Base|ou=passport-ldapauth
 LDAP\_FILTER|LDAP Filter|(uid={{username}})
-SESSION\_SECRET|A secret password to encrypt session information|secret
+
+# NEW
+SESSION|_KEY|A secret password to encrypt session information|secret
 

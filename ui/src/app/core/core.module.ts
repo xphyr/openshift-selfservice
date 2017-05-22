@@ -6,16 +6,20 @@ import {RouterModule} from '@angular/router';
 import {throwIfAlreadyLoaded} from './module-import-guard';
 
 import {NavComponent} from './nav/nav.component';
+import {AuthService} from "./auth/auth.service";
+import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
 
 @NgModule({
   imports: [
     CommonModule,
     FormsModule,
     HttpModule,
-    RouterModule
+    RouterModule,
+    BrowserAnimationsModule
   ],
+  providers: [AuthService],
   declarations: [NavComponent],
-  exports: [NavComponent]
+  exports: [NavComponent, FormsModule, BrowserAnimationsModule]
 })
 export class CoreModule {
   constructor(@Optional() @SkipSelf() parentModule: CoreModule) {
