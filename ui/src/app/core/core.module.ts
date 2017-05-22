@@ -6,9 +6,9 @@ import {RouterModule} from '@angular/router';
 import {throwIfAlreadyLoaded} from './module-import-guard';
 
 import {NavComponent} from './nav/nav.component';
-import {AuthService} from "./auth/auth.service";
-import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
-import {CanActivateViaAuthGuard} from "./auth/auth.guard";
+import {AuthService} from './auth/auth.service';
+import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
+import {CanActivateViaAuthGuard} from './auth/auth.guard';
 
 @NgModule({
   imports: [
