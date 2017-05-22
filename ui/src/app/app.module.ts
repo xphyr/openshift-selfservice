@@ -6,17 +6,19 @@ import {CoreModule} from "./core/core.module";
 import {SimpleNotificationsModule} from "angular2-notifications";
 import {LoginComponent} from './login/login.component';
 import {routing} from './app.routes';
+import { HomeComponent } from './home/home.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    LoginComponent
+    LoginComponent,
+    HomeComponent
   ],
   imports: [
     BrowserModule,
+    routing,
     CoreModule,
-    SimpleNotificationsModule.forRoot(),
-    routing
+    SimpleNotificationsModule.forRoot()
   ],
   providers: [],
   bootstrap: [AppComponent]

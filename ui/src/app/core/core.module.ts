@@ -8,17 +8,17 @@ import {throwIfAlreadyLoaded} from './module-import-guard';
 import {NavComponent} from './nav/nav.component';
 
 @NgModule({
-    imports: [
-        CommonModule,
-        FormsModule,
-        HttpModule,
-        RouterModule
-    ],
-    declarations: [NavComponent],
-    exports: [NavComponent]
+  imports: [
+    CommonModule,
+    FormsModule,
+    HttpModule,
+    RouterModule
+  ],
+  declarations: [NavComponent],
+  exports: [NavComponent]
 })
 export class CoreModule {
-    constructor(@Optional() @SkipSelf() parentModule: CoreModule) {
-        throwIfAlreadyLoaded(parentModule, 'core module');
-    }
+  constructor(@Optional() @SkipSelf() parentModule: CoreModule) {
+    throwIfAlreadyLoaded(parentModule, 'core module');
+  }
 }

@@ -1,17 +1,23 @@
-<nav class="navbar navbar-toggleable-md navbar-inverse bg-inverse fixed-top">
-    <button class="navbar-toggler navbar-toggler-right collapsed" type="button" data-toggle="collapse"
-            data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false"
-            aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="navbar-collapse collapse" id="navbarsExampleDefault" aria-expanded="false">
-        <ul class="navbar-nav mr-auto">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item" *ngFor="let navItem of navItems">
-                    <a class="nav-link" [routerLink]="[navItem.routerLink]" routerLinkActive="active"
-                       [routerLinkActiveOptions]="{exact: true}">{{ navItem.displayName }}</a>
-                </li>
-            </ul>
-        </ul>
+<nav class="navbar navbar-inverse fixed-top navbar-fixed-top">
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="#">Cloud SSP</a>
     </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+             aria-expanded="false">OpenShift <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li>
+              <a class="nav-link" routerLink="/login" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{exact: true}">Quotas anpassen</a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+      </ul>
+    </div>
+  </div>
 </nav>
