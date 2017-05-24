@@ -1,7 +1,7 @@
 <nav class="navbar navbar-inverse fixed-top navbar-fixed-top">
   <div class="container">
     <div class="navbar-header">
-      <a class="navbar-brand" href="#">Cloud SSP</a>
+      <a class="navbar-brand" href="#/home">Cloud SSP</a>
     </div>
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
@@ -17,7 +17,7 @@
         </li>
       </ul>
       <ul class="nav navbar-nav navbar-right" *ngIf="authService.userData.user.id">
-        <li><a href="#">Hallo {{ authService.userData.user.id }}</a></li>
+        <li><a href="#/home">Hallo {{ authService.userData.user.id }}</a></li>
       </ul>
     </div>
   </div>

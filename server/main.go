@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/oscp/openshift-selfservice/server/common"
+	"github.com/oscp/openshift-selfservice/server/openshift"
 )
 
 func main() {
@@ -19,6 +20,8 @@ func main() {
 	{
 		auth.GET("/check_token", checkTokenHandler)
 		auth.GET("/refresh_token", authMiddleware.RefreshHandler)
+
+		auth.POST("/openshift/editquotas", openshift.EditQuotasHandler)
 	}
 
 	router.Run()
