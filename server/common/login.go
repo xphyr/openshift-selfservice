@@ -30,7 +30,8 @@ func GetAuthMiddleware() (*jwt.GinJWTMiddleware) {
 			return userId, false
 		},
 		Authorizator: func(userId string, c *gin.Context) bool {
-			if userId == "admin" {
+			// TODO: LDAP here
+			if userId == "u220374" {
 				return true
 			}
 

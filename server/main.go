@@ -9,7 +9,8 @@ import (
 )
 
 func main() {
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
 	router.LoadHTMLGlob("templates/*")
 
 	// Public routes
@@ -28,10 +29,16 @@ func main() {
 	auth := router.Group("/auth/")
 	auth.Use(authMiddleware.MiddlewareFunc())
 	{
+		// Index page
 		auth.GET("/", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "index.html", gin.H{})
 		})
+
+		// Openshift routes
 		openshift.RegisterRoutes(auth)
+
+		// Thirdparty routes
+		// ...
 	}
 
 	router.Run()
