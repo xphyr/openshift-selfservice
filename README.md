@@ -80,7 +80,7 @@ LDAP\_BIND\_DN|LDAP Bind|cn=root
 LDAP\_BIND\_CRED|LDAP Credentials|secret
 LDAP\_SEARCH\_BASE|LDAP Search Base|ou=passport-ldapauth
 LDAP\_FILTER|LDAP Filter|(uid=%s)
-SESSION|_KEY|A secret password to encrypt session information|secret
+SESSION\_KEY|A secret password to encrypt session information|secret
 OPENSHIFT\_API\_URL|Your OpenShift API Url|https://master01.ch:8443
 OPENSHIFT\_TOKEN|The token from the service-account| 
 GIN\_MODE|Mode of the Webframework|debug/release

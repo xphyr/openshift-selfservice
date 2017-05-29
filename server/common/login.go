@@ -64,10 +64,10 @@ func ldapAuthenticator(userId string, password string, c *gin.Context) (string, 
 
 	ok, _, err := client.Authenticate(userId, password)
 	if err != nil {
-		log.Println("Error authenticating user %s: %+v", "username", err)
+		log.Println("Error authenticating user %s: %+v", userId, err)
 	}
 	if !ok {
-		log.Println("Authenticating failed for user %s", "username")
+		log.Println("Authenticating failed for user %s", userId)
 	}
 	return userId, ok
 }
