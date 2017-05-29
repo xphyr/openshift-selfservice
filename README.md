@@ -70,18 +70,16 @@ oc edit clusterPolicy default
 oc adm policy add-cluster-role-to-user ose:selfservice system:serviceaccount:ose-selfservice:ose-selfservice
 ```
 
-Just create a 'oc new-app' from building the dockerfile.
+Just create a 'oc new-app' from the dockerfile.
 
 ## Parameters
 **Param**|**Description**|**Example**
 :-----:|:-----:|:-----:
-LDAP\_URL|Your LDAP|ldap://xzw.ch:389
+LDAP\_URL|Your LDAP|ldap.xzw.ch
 LDAP\_BIND\_DN|LDAP Bind|cn=root
 LDAP\_BIND\_CRED|LDAP Credentials|secret
 LDAP\_SEARCH\_BASE|LDAP Search Base|ou=passport-ldapauth
-LDAP\_FILTER|LDAP Filter|(uid={{username}})
-
-# NEW
+LDAP\_FILTER|LDAP Filter|(uid=%s)
 SESSION|_KEY|A secret password to encrypt session information|secret
 OPENSHIFT\_API\_URL|Your OpenShift API Url|https://master01.ch:8443
 OPENSHIFT\_TOKEN|The token from the service-account| 

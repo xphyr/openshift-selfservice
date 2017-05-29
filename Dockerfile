@@ -1,16 +1,14 @@
-FROM node:6.9.5-wheezy
+FROM golang:1.8-alpine
 
-# Create app directory
-RUN mkdir -p /usr/src/app
-WORKDIR /usr/src/app
+WORKDIR /go/src/github.com/oscp/openshift-selfservice/server
 
-# Install app dependencies
-COPY package.json /usr/src/app/
-RUN npm install
+COPY . /go/src/github.com/oscp/openshift-selfservice
 
-# Bundle app source
-COPY . /usr/src/app
+RUN go get gopkg.in/gin-gonic/gin.v1 \
+    && go get gopkg.in/appleboy/gin-jwt.v2 \
+    && go get gopkg.in/dgrijalva/jwt-go.v3 \
+    && go get github.com/jtblin/go-ldap-client
 
-EXPOSE 8080
+RUN go install -v
 
-CMD [ "npm", "start" ]
+CMD ["server"]

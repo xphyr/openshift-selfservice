@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"gopkg.in/appleboy/gin-jwt.v2"
 	jwt3 "gopkg.in/dgrijalva/jwt-go.v3"
+	"github.com/jtblin/go-ldap-client"
 )
 
 func GetAuthMiddleware() (*jwt.GinJWTMiddleware) {
@@ -22,20 +23,9 @@ func GetAuthMiddleware() (*jwt.GinJWTMiddleware) {
 		Key:        []byte(key),
 		Timeout:    time.Hour,
 		MaxRefresh: time.Hour,
-		Authenticator: func(userId string, password string, c *gin.Context) (string, bool) {
-			if (len(userId) > 0) {
-				return userId, true
-			}
-
-			return userId, false
-		},
+		Authenticator: ldapAuthenticator,
 		Authorizator: func(userId string, c *gin.Context) bool {
-			// TODO: LDAP here
-			if userId == "u220374" {
-				return true
-			}
-
-			return false
+			return true
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.Abort()
@@ -50,6 +40,36 @@ func GetAuthMiddleware() (*jwt.GinJWTMiddleware) {
 		TokenLookup: "cookie:token",
 		TimeFunc: time.Now,
 	}
+}
+
+func ldapAuthenticator(userId string, password string, c *gin.Context) (string, bool) {
+	ldapHost := os.Getenv("LDAP_URL")
+	ldapBind := os.Getenv("LDAP_BIND_DN")
+	ldapBindPw := os.Getenv("LDAP_BIND_CRED")
+	ldapFilter := os.Getenv("LDAP_FILTER")
+	ldapSearchBase := os.Getenv("LDAP_SEARCH_BASE")
+
+	client := &ldap.LDAPClient{
+		Base:         ldapSearchBase,
+		Host:         ldapHost,
+		Port:         389,
+		UseSSL:       false,
+		SkipTLS: true,
+		BindDN:       ldapBind,
+		BindPassword: ldapBindPw,
+		UserFilter:   ldapFilter,
+	}
+	// It is the responsibility of the caller to close the connection
+	defer client.Close()
+
+	ok, _, err := client.Authenticate(userId, password)
+	if err != nil {
+		log.Println("Error authenticating user %s: %+v", "username", err)
+	}
+	if !ok {
+		log.Println("Authenticating failed for user %s", "username")
+	}
+	return userId, ok
 }
 
 func CookieLoginHandler(mw *jwt.GinJWTMiddleware, c *gin.Context) {

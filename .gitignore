@@ -1,84 +1,17 @@
-# See http://help.github.com/ignore-files/ for more about ignoring files.
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
 
-# compiled output
-/dist
-/tmp
+# Test binary, build with `go test -c`
+*.test
 
-# dependencies
-node_modules/
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
 *.iml
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# misc
-/.sass-cache
-/connect.lock
-/coverage/*
-/libpeerconnection.log
-npm-debug.log
-testem.log
-/typings
-
-# e2e
-/e2e/*.js
-/e2e/*.map
-
-#System Files
-.DS_Store
-Thumbs.db
-
-# See http://help.github.com/ignore-files/ for more about ignoring files.
-
-# compiled output
-/dist
-/tmp
-/out-tsc
-
-# dependencies
-/node_modules
-
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-testem.log
-/typings
-
-# e2e
-/e2e/*.js
-/e2e/*.map
-
-# System Files
-.DS_Store
-Thumbs.db
+.idea/
