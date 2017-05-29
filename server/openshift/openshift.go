@@ -6,11 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"os"
 	"log"
-	"encoding/json"
 	"gopkg.in/appleboy/gin-jwt.v2"
-	"github.com/oscp/openshift-selfservice/server/models"
 	"strconv"
+	"github.com/oscp/openshift-selfservice/server/models"
+	"encoding/json"
+	"io/ioutil"
+	"strings"
 )
+
+const GENERIC_API_ERROR = "Fehler beim Aufruf der OpenShift-API"
 
 func RegisterRoutes(r *gin.Engine) {
 	r.GET("/openshift/editquotas", func(c *gin.Context) {
@@ -20,34 +24,12 @@ func RegisterRoutes(r *gin.Engine) {
 }
 
 func editQuotasHandler(c *gin.Context) {
-	maxCPU := os.Getenv("MAX_CPU")
-	maxMemory := os.Getenv("MAX_MEMORY")
-
-	if (len(maxCPU) == 0 || len(maxMemory) == 0) {
-		log.Fatal("Env variables 'MAX_MEMORY' and 'MAX_CPU' must be specified")
-	}
-
 	project := c.PostForm("project")
 	cpu := c.PostForm("cpu")
 	memory := c.PostForm("memory")
 
-	// Validate input
-	isOk := true
-	msg := ""
-	if (len(project) == 0) {
-		isOk = false
-		msg = "Projekt muss angegeben werden"
-	}
-	intOk, intMsg := validateIntInput(maxCPU, cpu)
-	if (isOk && !intOk) {
-		isOk = false
-		msg = intMsg
-	}
-	intOk, intMsg = validateIntInput(maxMemory, memory)
-	if (isOk && !intOk) {
-		isOk = false
-		msg = intMsg
-	}
+	isOk, msg := validateEditQuotas("u220374", project, cpu, memory)
+
 	if (!isOk) {
 		c.HTML(http.StatusOK, "editquotas.html", gin.H{
 			"Error": msg,
@@ -55,18 +37,41 @@ func editQuotasHandler(c *gin.Context) {
 		return
 	}
 
-	//reply := checkAdminPermissions(getUserName(c), editQuotasCmd.ProjectName)
-
-	//if (!reply.Status) {
-	//	c.JSON(http.StatusInternalServerError, reply)
-	//	return
-	//}
-
 	log.Print("User has access to project, continue")
 
 	c.HTML(http.StatusOK, "editquotas.html", gin.H{
 		"Success": "Die neuen Quotas wurden gespeichert",
 	})
+}
+
+func validateEditQuotas(username string, project string, cpu string, memory string) (bool, string) {
+	maxCPU := os.Getenv("MAX_CPU")
+	maxMemory := os.Getenv("MAX_MEMORY")
+
+	if (len(maxCPU) == 0 || len(maxMemory) == 0) {
+		log.Fatal("Env variables 'MAX_MEMORY' and 'MAX_CPU' must be specified")
+	}
+
+	// Validate user input
+	if (len(project) == 0) {
+		return false, "Projekt muss angegeben werden"
+	}
+	isOk, msg := validateIntInput(maxCPU, cpu)
+	if (!isOk) {
+		return false, msg
+	}
+	isOk, msg = validateIntInput(maxMemory, memory)
+	if (!isOk) {
+		return false, msg
+	}
+
+	// Validate permissions
+	isOk, msg = checkAdminPermissions(username, project)
+	if (!isOk) {
+		return false, msg
+	}
+
+	return true, ""
 }
 
 func validateIntInput(maxValue string, input string) (bool, string) {
@@ -77,11 +82,11 @@ func validateIntInput(maxValue string, input string) (bool, string) {
 
 	inputInt, err := strconv.Atoi(input)
 	if (err != nil) {
-		return false, "Bitte eine Zahl eintragen"
+		return false, "Bitte eine gültige Zahl eintragen"
 	}
 
 	if (inputInt > maxInt) {
-		return false, "Du kannst maximal " + maxValue + " reservieren"
+		return false, "Du kannst maximal " + maxValue + " eintragen"
 	}
 
 	return true, ""
@@ -121,44 +126,58 @@ func getUserName(c *gin.Context) string {
 	return jwtClaims["id"].(string)
 }
 
-func checkAdminPermissions(username string, projectName string) models.Reply {
-	client, req := getHttpClient("GET", "oapi/v1/namespaces/" + projectName + "/policybindings/:default/")
+func checkAdminPermissions(username string, projectName string) (bool, string) {
+	client, req := getHttpClient("GET", "oapi/v1/namespaces/" + projectName + "/policybindings/:default")
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 
-	genericError := "Fehler beim verarbeiten der OpenShift-API"
-
 	if (err != nil) {
 		log.Println("Error from server: ", err.Error())
-		return models.Reply{
-			Message: genericError,
-			Status: false,
-		}
+		return false, GENERIC_API_ERROR
 	}
 
 	if (resp.StatusCode == 404) {
 		log.Println("Project was not found", projectName)
-		return models.Reply{
-			Message: "Das Projekt existiert nicht",
-			Status: false,
-		}
+		return false, "Das Projekt existiert nicht"
 	}
 
-	// Parse response
-	var policyBindings models.PolicyBindingResponse
-	err = json.NewDecoder(resp.Body).Decode(&policyBindings)
+	// Remove the groupNames: null because of bug in k8s api
+	policyBindings := models.PolicyBindingResponse{}
+	bodyBytes, err :=ioutil.ReadAll(resp.Body)
 	if (err != nil) {
+		log.Println("error parsing body of response:", err)
+		return false, GENERIC_API_ERROR
+	}
+
+	cBody := strings.Replace(strings.Replace(string(bodyBytes), "\"groupNames\":null,", "", -1),
+		"\"userNames\":null,", "", -1)
+
+	if err := json.Unmarshal([]byte(cBody), &policyBindings); err != nil {
 		log.Println("error decoding json:", err, resp.StatusCode)
-		return models.Reply{
-			Message: genericError,
-			Status: false,
+		return false, GENERIC_API_ERROR
+	}
+
+	// Check if user has admin-access
+	hasAccess := false
+	admins := ""
+	for _,v := range policyBindings.RoleBindings {
+		if (v.Name == "admin") {
+			for _,u := range v.RoleBinding.UserNames {
+				if (u == username) {
+					hasAccess = true
+				}
+
+				if (len(admins) != 0) {
+					admins += ", "
+				}
+				admins += u
+			}
 		}
 	}
 
-	log.Print(resp.StatusCode, policyBindings)
-
-	return models.Reply{
-		Status: true,
-		Message: "",
+	if (hasAccess) {
+		return true, ""
+	} else {
+		return false, "Du hast keine Admin Rechte auf dem Projekt. Bestehende Admins sind folgende Benutzer: " + admins
 	}
 }
