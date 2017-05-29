@@ -157,6 +157,7 @@ func changeProjectPermission(project string, username string) (bool, string) {
 	}
 
 	if (resp.StatusCode == http.StatusOK) {
+		log.Print(username + " is now admin of " + project)
 		return true, ""
 	} else {
 		errMsg, _ := ioutil.ReadAll(resp.Body)
@@ -166,5 +167,45 @@ func changeProjectPermission(project string, username string) (bool, string) {
 }
 
 func createOrUpdateMetadata(project string, billing string, megaid string, username string) (bool, string) {
-	return true, ""
+	client, req := getOseHttpClient("GET", "api/v1/namespaces/" + project, nil)
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
+	if (err != nil) {
+		log.Println("Error from server: ", err.Error())
+		return false, genericApiError
+	}
+
+	projectConfig := models.ProjectResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(&projectConfig); err != nil {
+		log.Println("error decoding json:", err, resp.StatusCode)
+		return false, genericApiError
+	}
+
+	projectConfig.Metadata.Annotations.BillingNr = billing
+	projectConfig.Metadata.Annotations.MegaId = megaid
+	projectConfig.Metadata.Annotations.Requester = username
+
+	e, err := json.Marshal(projectConfig)
+	if (err != nil) {
+		log.Println("error encoding json:", err)
+		return false, genericApiError
+	}
+
+	client, req = getOseHttpClient("PUT",
+		"api/v1/namespaces/" + project,
+		bytes.NewReader(e))
+
+	resp, err = client.Do(req)
+	defer resp.Body.Close()
+
+	if (resp.StatusCode == http.StatusOK) {
+		log.Println("User " + username + " changed changed config of project project " + project + ". Kontierungsnummer: " + billing, ", MegaID: " + megaid)
+		return true, ""
+	} else {
+		errMsg, _ := ioutil.ReadAll(resp.Body)
+		log.Println("Error updating project config:", err, resp.StatusCode, string(errMsg))
+
+		return false, genericApiError
+	}
 }
