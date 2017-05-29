@@ -12,21 +12,27 @@ func main() {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 
-	// Auth config
+	// Public routes
 	authMiddleware := common.GetAuthMiddleware()
-	router.POST("/login", authMiddleware.LoginHandler)
+	router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusPermanentRedirect, "/auth/")
+	})
+	router.GET("/login", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", gin.H{})
+	})
+	router.POST("/login", func(c *gin.Context) {
+		common.CookieLoginHandler(authMiddleware, c)
+	})
 
-	auth := router.Group("/auth")
+	// Protected routes
+	auth := router.Group("/auth/")
 	auth.Use(authMiddleware.MiddlewareFunc())
 	{
-		auth.GET("/refresh_token", authMiddleware.RefreshHandler)
+		auth.GET("/", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "index.html", gin.H{})
+		})
+		openshift.RegisterRoutes(auth)
 	}
-
-	// Web routes
-	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{})
-	})
-	openshift.RegisterRoutes(router)
 
 	router.Run()
 }

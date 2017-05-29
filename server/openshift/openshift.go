@@ -6,17 +6,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"os"
 	"log"
-	"gopkg.in/appleboy/gin-jwt.v2"
 	"strconv"
 	"github.com/oscp/openshift-selfservice/server/models"
 	"encoding/json"
 	"io/ioutil"
 	"strings"
+	"gopkg.in/appleboy/gin-jwt.v2"
 )
 
 const GENERIC_API_ERROR = "Fehler beim Aufruf der OpenShift-API"
 
-func RegisterRoutes(r *gin.Engine) {
+func RegisterRoutes(r *gin.RouterGroup) {
 	r.GET("/openshift/editquotas", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "editquotas.html", gin.H{})
 	})
