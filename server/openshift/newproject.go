@@ -50,6 +50,7 @@ func newTestProjectHandler(c *gin.Context) {
 	if (!isOk) {
 		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
 			"Error": msg,
+			"User": common.GetUserName(c),
 		})
 		return
 	}
@@ -57,10 +58,12 @@ func newTestProjectHandler(c *gin.Context) {
 	if (!isOk) {
 		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
 			"Error": msg,
+			"User": common.GetUserName(c),
 		})
 	} else {
 		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
 			"Success": msg,
+			"User": common.GetUserName(c),
 		})
 	}
 }

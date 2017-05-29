@@ -36,7 +36,9 @@ func RegisterRoutes(r *gin.RouterGroup) {
 
 	// NewTestProject
 	r.GET("/openshift/newtestproject", func(c *gin.Context) {
-		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{})
+		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
+			"User": common.GetUserName(c),
+		})
 	})
 	r.POST("/openshift/newtestproject", newTestProjectHandler)
 }
