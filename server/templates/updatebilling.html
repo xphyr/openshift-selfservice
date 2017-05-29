@@ -1,11 +1,11 @@
-<% include header %>
+{{ template "header.html" . }}
 
 <div class="jumbotron">
     <h1><span class="fa fa-lock"></span> Kontierungsnummer anpassen</h1>
     <p>Hier kannst du die Kontierungsnummer deines OpenShift Projekts anpassen</p>
 </div>
 
-<form action="/updatebilling" method="post">
+<form method="post">
     <div class="form-group">
         <label for="project">Projektname</label>
         <input type="text" class="form-control" required id="project" name="project" placeholder="projektname-dev">
@@ -17,4 +17,4 @@
     <button type="submit" class="btn btn-primary">Kontierungsinformation anpassen</button>
 </form>
 
-<% include footer %>
+{{ template "footer.html" . }}

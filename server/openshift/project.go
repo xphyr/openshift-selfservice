@@ -68,12 +68,49 @@ func newTestProjectHandler(c *gin.Context) {
 	}
 }
 
+func updateBillingHandler(c *gin.Context) {
+	username := common.GetUserName(c)
+	project := c.PostForm("project")
+	billing := c.PostForm("billing")
+
+	isOk, msg := validateBillingInformation(project, billing)
+	if (!isOk) {
+		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
+			"Error": msg,
+		})
+		return
+	}
+
+	isOk, msg = createOrUpdateMetadata(project, billing, "", username)
+	if (!isOk) {
+		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
+			"Error": msg,
+		})
+	} else {
+		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
+			"Success": "Die neuen Daten wurden gespeichert",
+		})
+	}
+}
+
 func validateNewProject(project string, billing string, isTestproject bool) (bool, string) {
 	if (len(project) == 0) {
 		return false, "Projektname muss angegeben werden"
 	}
 
 	if (!isTestproject && len(billing) == 0) {
+		return false, "Kontierungsnummer muss angegeben werden"
+	}
+
+	return true, ""
+}
+
+func validateBillingInformation(project string, billing string) (bool, string) {
+	if (len(project) == 0) {
+		return false, "Projektname muss angegeben werden"
+	}
+
+	if (len(billing) == 0) {
 		return false, "Kontierungsnummer muss angegeben werden"
 	}
 
@@ -186,8 +223,11 @@ func createOrUpdateMetadata(project string, billing string, megaid string, usern
 	}
 
 	projectConfig.Metadata.Annotations.BillingNr = billing
-	projectConfig.Metadata.Annotations.MegaId = megaid
 	projectConfig.Metadata.Annotations.Requester = username
+
+	if (len(megaid) > 0) {
+		projectConfig.Metadata.Annotations.MegaId = megaid
+	}
 
 	e, err := json.Marshal(projectConfig)
 	if (err != nil) {

@@ -18,6 +18,7 @@ const (
 	editQuotasUrl = "editquotas.html"
 	newProjectUrl = "newproject.html"
 	newTestProjectUrl = "newtestproject.html"
+	updateBillingUrl = "updatebilling.html"
 	genericApiError = "Fehler beim Aufruf der OpenShift-API"
 )
 
@@ -41,6 +42,12 @@ func RegisterRoutes(r *gin.RouterGroup) {
 		})
 	})
 	r.POST("/openshift/newtestproject", newTestProjectHandler)
+
+	// Update billing
+	r.GET("/openshift/updatebilling", func(c *gin.Context) {
+		c.HTML(http.StatusOK, updateBillingUrl, gin.H{})
+	})
+	r.POST("/openshift/updatebilling", updateBillingHandler)
 }
 
 func checkAdminPermissions(username string, project string) (bool, string) {
