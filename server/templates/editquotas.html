@@ -1,0 +1,24 @@
+{{ template "header.html" . }}
+
+<div class="jumbotron">
+    <h1><span class="fa fa-lock"></span> Projekt Quotas anpassen</h1>
+    <p>Hier kannst du CPU / Memory Quotas deines Projektes anpassen. Alle Anpassungen werden geloggt.</p>
+</div>
+
+<form action="/openshift/editquotas" method="post">
+    <div class="form-group">
+        <label for="project">Projektname</label>
+        <input type="text" class="form-control" required id="project" name="project" placeholder="projektname-dev">
+    </div>
+    <div class="form-group">
+        <label for="cpu">Neue CPU Quotas [Cores]</label>
+        <input type="number" min="0" class="form-control" required id="cpu" name="cpu" value="2">
+    </div>
+    <div class="form-group">
+        <label for="memory">Neue Memory Quotas [GB]</label>
+        <input type="number" min="0" class="form-control" required id="memory" name="memory" value="4">
+    </div>
+    <button type="submit" class="btn btn-primary">Quotas anwenden</button>
+</form>
+
+{{ template "footer.html" . }}

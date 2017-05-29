@@ -10,25 +10,25 @@ import (
 
 func main() {
 	router := gin.Default()
+	router.LoadHTMLGlob("templates/*")
 
+	// Auth config
 	authMiddleware := common.GetAuthMiddleware()
-
 	router.POST("/login", authMiddleware.LoginHandler)
 
 	auth := router.Group("/auth")
 	auth.Use(authMiddleware.MiddlewareFunc())
 	{
-		auth.GET("/check_token", checkTokenHandler)
 		auth.GET("/refresh_token", authMiddleware.RefreshHandler)
-
-		auth.POST("/openshift/editquotas", openshift.EditQuotasHandler)
 	}
 
-	router.Run()
-}
+	// Web routes
+	router.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", gin.H{})
+	})
+	openshift.RegisterRoutes(router)
 
-func checkTokenHandler(c *gin.Context) {
-	c.String(http.StatusOK, "{\"status\": \"OK\"}")
+	router.Run()
 }
 
 //func ldapFunc() {

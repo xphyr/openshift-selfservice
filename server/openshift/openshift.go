@@ -9,20 +9,82 @@ import (
 	"encoding/json"
 	"gopkg.in/appleboy/gin-jwt.v2"
 	"github.com/oscp/openshift-selfservice/server/models"
+	"strconv"
 )
 
-func EditQuotasHandler(c *gin.Context) {
-	var editQuotasCmd models.EditQuotasCommand
-	c.BindJSON(&editQuotasCmd)
+func RegisterRoutes(r *gin.Engine) {
+	r.GET("/openshift/editquotas", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "editquotas.html", gin.H{})
+	})
+	r.POST("/openshift/editquotas", editQuotasHandler)
+}
 
-	reply := checkAdminPermissions(getUserName(c), editQuotasCmd.ProjectName)
+func editQuotasHandler(c *gin.Context) {
+	maxCPU := os.Getenv("MAX_CPU")
+	maxMemory := os.Getenv("MAX_MEMORY")
 
-	if (!reply.Status) {
-		c.JSON(http.StatusInternalServerError, reply)
+	if (len(maxCPU) == 0 || len(maxMemory) == 0) {
+		log.Fatal("Env variables 'MAX_MEMORY' and 'MAX_CPU' must be specified")
+	}
+
+	project := c.PostForm("project")
+	cpu := c.PostForm("cpu")
+	memory := c.PostForm("memory")
+
+	// Validate input
+	isOk := true
+	msg := ""
+	if (len(project) == 0) {
+		isOk = false
+		msg = "Projekt muss angegeben werden"
+	}
+	intOk, intMsg := validateIntInput(maxCPU, cpu)
+	if (isOk && !intOk) {
+		isOk = false
+		msg = intMsg
+	}
+	intOk, intMsg = validateIntInput(maxMemory, memory)
+	if (isOk && !intOk) {
+		isOk = false
+		msg = intMsg
+	}
+	if (!isOk) {
+		c.HTML(http.StatusOK, "editquotas.html", gin.H{
+			"Error": msg,
+		})
 		return
 	}
 
+	//reply := checkAdminPermissions(getUserName(c), editQuotasCmd.ProjectName)
+
+	//if (!reply.Status) {
+	//	c.JSON(http.StatusInternalServerError, reply)
+	//	return
+	//}
+
 	log.Print("User has access to project, continue")
+
+	c.HTML(http.StatusOK, "editquotas.html", gin.H{
+		"Success": "Die neuen Quotas wurden gespeichert",
+	})
+}
+
+func validateIntInput(maxValue string, input string) (bool, string) {
+	maxInt, err := strconv.Atoi(maxValue)
+	if (err != nil) {
+		log.Fatal("Could not parse 'MAX' value of", maxValue)
+	}
+
+	inputInt, err := strconv.Atoi(input)
+	if (err != nil) {
+		return false, "Bitte eine Zahl eintragen"
+	}
+
+	if (inputInt > maxInt) {
+		return false, "Du kannst maximal " + maxValue + " reservieren"
+	}
+
+	return true, ""
 }
 
 func getAddress(end string) string {

@@ -75,8 +75,6 @@ Just create a 'oc new-app' from building the dockerfile.
 ## Parameters
 **Param**|**Description**|**Example**
 :-----:|:-----:|:-----:
-MAX\_CPU|How many CPU can a user assign to his project|30
-MAX\_MEMORY|How many GB memory can a user assign to his project|50
 LDAP\_URL|Your LDAP|ldap://xzw.ch:389
 LDAP\_BIND\_DN|LDAP Bind|cn=root
 LDAP\_BIND\_CRED|LDAP Credentials|secret
@@ -88,3 +86,6 @@ SESSION|_KEY|A secret password to encrypt session information|secret
 OPENSHIFT\_API\_URL|Your OpenShift API Url|https://master01.ch:8443
 OPENSHIFT\_TOKEN|The token from the service-account| 
 GIN\_MODE|Mode of the Webframework|debug/release
+MAX\_CPU|How many CPU can a user assign to his project|30
+MAX\_MEMORY|How many GB memory can a user assign to his project|50
+
