@@ -74,7 +74,7 @@ type ProjectResponse struct {
 		   } `json:"status"`
 }
 
-type ProjectRequest struct {
+type NewObjectRequest struct {
 	Kind       string `json:"kind"`
 	APIVersion string `json:"apiVersion"`
 	Metadata   Metadata `json:"metadata"`

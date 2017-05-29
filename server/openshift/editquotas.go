@@ -21,7 +21,7 @@ func editQuotasHandler(c *gin.Context) {
 	isOk, msg := validateEditQuotas(username, project, cpu, memory)
 
 	if (!isOk) {
-		c.HTML(http.StatusOK, "editquotas.html", gin.H{
+		c.HTML(http.StatusOK, editQuotasUrl, gin.H{
 			"Error": msg,
 		})
 		return
@@ -29,7 +29,7 @@ func editQuotasHandler(c *gin.Context) {
 
 	isOk, msg = updateQuotas(username, project, cpu, memory)
 
-	c.HTML(http.StatusOK, "editquotas.html", gin.H{
+	c.HTML(http.StatusOK, editQuotasUrl, gin.H{
 		"Success": "Die neuen Quotas wurden gespeichert",
 	})
 }

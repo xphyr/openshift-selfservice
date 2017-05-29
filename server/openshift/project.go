@@ -73,7 +73,7 @@ func updateBillingHandler(c *gin.Context) {
 	project := c.PostForm("project")
 	billing := c.PostForm("billing")
 
-	isOk, msg := validateBillingInformation(project, billing)
+	isOk, msg := validateBillingInformation(project, billing, username)
 	if (!isOk) {
 		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
 			"Error": msg,
@@ -105,7 +105,7 @@ func validateNewProject(project string, billing string, isTestproject bool) (boo
 	return true, ""
 }
 
-func validateBillingInformation(project string, billing string) (bool, string) {
+func validateBillingInformation(project string, billing string, username string) (bool, string) {
 	if (len(project) == 0) {
 		return false, "Projektname muss angegeben werden"
 	}
@@ -114,11 +114,17 @@ func validateBillingInformation(project string, billing string) (bool, string) {
 		return false, "Kontierungsnummer muss angegeben werden"
 	}
 
+	// Validate permissions
+	isOk, msg := checkAdminPermissions(username, project)
+	if (!isOk) {
+		return false, msg
+	}
+
 	return true, ""
 }
 
 func createNewProject(project string, username string, billing string, megaid string) (bool, string) {
-	p := models.ProjectRequest{
+	p := models.NewObjectRequest{
 		APIVersion: "v1",
 		Kind: "ProjectRequest",
 		Metadata: models.Metadata{Name: project, },
