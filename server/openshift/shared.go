@@ -70,7 +70,7 @@ func checkAdminPermissions(username string, project string) (bool, string) {
 	for _, v := range policyBindings.RoleBindings {
 		if (v.Name == "admin") {
 			for _, u := range v.RoleBinding.UserNames {
-				if (u == username) {
+				if (strings.ToLower(u) == strings.ToLower(username)) {
 					hasAccess = true
 				}
 
