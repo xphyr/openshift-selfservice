@@ -71,13 +71,13 @@ func updateQuotas(username string, project string, cpu string, memory string) (b
 
 	if (err != nil) {
 		log.Println("Error from server: ", err.Error())
-		return false, GENERIC_API_ERROR
+		return false, genericApiError
 	}
 
 	var existingQuotas models.ResourceQuotaResponse
 	if err := json.NewDecoder(resp.Body).Decode(&existingQuotas); err != nil {
 		log.Println("error decoding json:", err, resp.StatusCode)
-		return false, GENERIC_API_ERROR
+		return false, genericApiError
 	}
 
 	existingQuotas.Items[0].Spec.Hard.CPU = cpu
@@ -85,8 +85,8 @@ func updateQuotas(username string, project string, cpu string, memory string) (b
 
 	e, err := json.Marshal(existingQuotas.Items[0])
 	if (err != nil) {
-		log.Println("error encoding json:", err, resp.StatusCode)
-		return false, GENERIC_API_ERROR
+		log.Println("error encoding json:", err)
+		return false, genericApiError
 	}
 
 	client, req = getOseHttpClient("PUT",
@@ -103,6 +103,6 @@ func updateQuotas(username string, project string, cpu string, memory string) (b
 		errMsg, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Error updating resourceQuota:", err, resp.StatusCode, string(errMsg))
 
-		return false, GENERIC_API_ERROR
+		return false, genericApiError
 	}
 }

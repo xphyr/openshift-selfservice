@@ -39,6 +39,7 @@ func GetAuthMiddleware() (*jwt.GinJWTMiddleware) {
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.Abort()
+			c.SetCookie("token", "", -1, "", "", false, true)
 			if (message == "Cookie token empty") {
 				message = ""
 			}
