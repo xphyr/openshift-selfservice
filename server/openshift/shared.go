@@ -6,12 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"os"
 	"log"
-	"github.com/oscp/openshift-selfservice/server/models"
-	"encoding/json"
-	"io/ioutil"
 	"strings"
 	"io"
 	"github.com/oscp/openshift-selfservice/server/common"
+	"github.com/Jeffail/gabs"
 )
 
 const (
@@ -67,17 +65,27 @@ func checkAdminPermissions(username string, project string) (bool, string) {
 	// Check if user has admin-access
 	hasAccess := false
 	admins := ""
-	for _, v := range policyBindings.RoleBindings {
-		if (v.Name == "admin") {
-			for _, u := range v.RoleBinding.UserNames {
-				if (strings.ToLower(u) == strings.ToLower(username)) {
+	children, err := policyBindings.S("roleBindings").Children()
+	if (err != nil) {
+		log.Println("Unable to parse roleBindings", err.Error())
+		return false, genericApiError
+	}
+	for _, v := range children {
+		if (v.Path("name").Data().(string) == "admin") {
+			usernames, err := v.Path("roleBinding.userNames").Children()
+			if (err != nil) {
+				log.Println("Unable to parse roleBinding", err.Error())
+				return false, genericApiError
+			}
+			for _, u := range usernames {
+				if (strings.ToLower(u.Data().(string)) == strings.ToLower(username)) {
 					hasAccess = true
 				}
 
 				if (len(admins) != 0) {
 					admins += ", "
 				}
-				admins += u
+				admins += u.Data().(string)
 			}
 		}
 	}
@@ -89,7 +97,7 @@ func checkAdminPermissions(username string, project string) (bool, string) {
 	}
 }
 
-func getPolicyBindings(project string) (*models.PolicyBindingResponse, string) {
+func getPolicyBindings(project string) (*gabs.Container, string) {
 	client, req := getOseHttpClient("GET", "oapi/v1/namespaces/" + project + "/policybindings/:default", nil)
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
@@ -104,23 +112,13 @@ func getPolicyBindings(project string) (*models.PolicyBindingResponse, string) {
 		return nil, "Das Projekt existiert nicht"
 	}
 
-	// Remove the null values because of bug in OSE api
-	policyBindings := models.PolicyBindingResponse{}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	json, err := gabs.ParseJSONBuffer(resp.Body)
 	if (err != nil) {
 		log.Println("error parsing body of response:", err)
 		return nil, genericApiError
 	}
 
-	cBody := strings.Replace(strings.Replace(string(bodyBytes), "\"groupNames\":null,", "", -1),
-		"\"userNames\":null,", "", -1)
-
-	if err := json.Unmarshal([]byte(cBody), &policyBindings); err != nil {
-		log.Println("error decoding json:", err, resp.StatusCode)
-		return nil, genericApiError
-	}
-
-	return &policyBindings, ""
+	return json, ""
 }
 
 func getOseAddress(end string) string {

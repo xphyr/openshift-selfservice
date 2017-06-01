@@ -178,22 +178,22 @@ func changeProjectPermission(project string, username string) (bool, string) {
 		return false, msg
 	}
 
-	for idx, r := range policyBindings.RoleBindings {
-		if (r.Name == "admin") {
-			policyBindings.RoleBindings[idx].RoleBinding.UserNames = append(r.RoleBinding.UserNames, strings.ToLower(username), strings.ToUpper(username))
-		}
-	}
-
-	e, err := json.Marshal(policyBindings)
+	children, err := policyBindings.S("roleBindings").Children()
 	if (err != nil) {
-		log.Println("error encoding json:", err)
+		log.Println("Unable to parse roleBindings", err.Error())
 		return false, genericApiError
+	}
+	for _, v := range children {
+		if (v.Path("name").Data().(string) == "admin") {
+			v.ArrayAppend(strings.ToLower(username), "roleBinding", "userNames")
+			v.ArrayAppend(strings.ToUpper(username), "roleBinding", "userNames")
+		}
 	}
 
 	// Update the policyBindings on the api
 	client, req := getOseHttpClient("PUT",
 		"oapi/v1/namespaces/" + project + "/policybindings/:default",
-		bytes.NewReader(e))
+		bytes.NewReader(policyBindings.Bytes()))
 
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
@@ -229,8 +229,6 @@ func createOrUpdateMetadata(project string, billing string, megaid string, usern
 		return false, genericApiError
 	}
 
-	log.Println(json.String())
-
 	annotations := json.Path("metadata.annotations")
 	annotations.Set(billing, "openshift.io/kontierung-element")
 	annotations.Set(username, "openshift.io/requester")
@@ -238,8 +236,6 @@ func createOrUpdateMetadata(project string, billing string, megaid string, usern
 	if (len(megaid) > 0) {
 		annotations.Set(megaid, "openshift.io/MEGAID")
 	}
-
-	log.Println(json.String())
 
 	client, req = getOseHttpClient("PUT",
 		"api/v1/namespaces/" + project,
