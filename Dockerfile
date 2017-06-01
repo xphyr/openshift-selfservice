@@ -12,4 +12,6 @@ RUN go get gopkg.in/gin-gonic/gin.v1 \
 
 RUN go install -v
 
+EXPOSE 8080
+
 CMD ["server"]
