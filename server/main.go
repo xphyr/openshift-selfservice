@@ -24,6 +24,11 @@ func main() {
 	router.POST("/login", func(c *gin.Context) {
 		common.CookieLoginHandler(authMiddleware, c)
 	})
+	router.GET("/logout", func(c *gin.Context) {
+		c.Abort()
+		c.SetCookie("token", "", -1, "", "", false, true)
+		c.Redirect(http.StatusTemporaryRedirect, "/login")
+	})
 
 	// Protected routes
 	auth := router.Group("/auth/")
