@@ -36,4 +36,3 @@ func DebugMode() bool {
 
 	return mode != "release"
 }
-

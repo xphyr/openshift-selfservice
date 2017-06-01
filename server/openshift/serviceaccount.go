@@ -4,9 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"github.com/oscp/openshift-selfservice/server/common"
-	"encoding/json"
 	"bytes"
-	"github.com/oscp/openshift-selfservice/server/models"
 	"log"
 	"io/ioutil"
 )
@@ -46,21 +44,11 @@ func validateNewServiceAccount(username string, project string, serviceAccountNa
 }
 
 func createNewServiceAccount(username string, project string, serviceaccount string) (bool, string) {
-	p := models.NewObjectRequest{
-		APIVersion: "v1",
-		Kind: "ServiceAccount",
-		Metadata: models.Metadata{Name: serviceaccount, },
-	}
-
-	e, err := json.Marshal(p)
-	if (err != nil) {
-		log.Println("error encoding json:", err)
-		return false, genericApiError
-	}
+	p := newObjectRequest("ServiceAccount", serviceaccount)
 
 	client, req := getOseHttpClient("POST",
 		"api/v1/namespaces/" + project + "/serviceaccounts",
-		bytes.NewReader(e))
+		bytes.NewReader(p.Bytes()))
 
 	resp, err := client.Do(req)
 	defer resp.Body.Close()

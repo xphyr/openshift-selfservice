@@ -4,12 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/oscp/openshift-selfservice/server/common"
 	"net/http"
-	"encoding/json"
 	"bytes"
 	"log"
 	"io/ioutil"
 	"strings"
-	"github.com/oscp/openshift-selfservice/server/models"
 	"github.com/Jeffail/gabs"
 )
 
@@ -125,21 +123,11 @@ func validateBillingInformation(project string, billing string, username string)
 }
 
 func createNewProject(project string, username string, billing string, megaid string) (bool, string) {
-	p := models.NewObjectRequest{
-		APIVersion: "v1",
-		Kind: "ProjectRequest",
-		Metadata: models.Metadata{Name: project, },
-	}
-
-	e, err := json.Marshal(p)
-	if (err != nil) {
-		log.Println("error encoding json:", err)
-		return false, genericApiError
-	}
+	p := newObjectRequest("ProjectRequest", project)
 
 	client, req := getOseHttpClient("POST",
 		"oapi/v1/projectrequests",
-		bytes.NewReader(e))
+		bytes.NewReader(p.Bytes()))
 
 	resp, err := client.Do(req)
 	defer resp.Body.Close()

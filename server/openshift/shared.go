@@ -153,4 +153,12 @@ func getOseHttpClient(method string, endUrl string, body io.Reader) (*http.Clien
 	return client, req
 }
 
+func newObjectRequest(kind string, name string) *gabs.Container {
+	json := gabs.New()
 
+	json.Set(kind, "kind")
+	json.Set("v1", "apiVersion")
+	json.SetP(name, "metadata.name")
+
+	return json
+}
