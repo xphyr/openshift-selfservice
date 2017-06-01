@@ -1,14 +1,13 @@
 package openshift
 
 import (
-	"encoding/json"
-	"bytes"
 	"net/http"
 	"github.com/gin-gonic/gin"
 	"os"
 	"github.com/oscp/openshift-selfservice/server/common"
 	"log"
-	"github.com/oscp/openshift-selfservice/server/models"
+	"github.com/Jeffail/gabs"
+	"bytes"
 	"io/ioutil"
 )
 
@@ -74,24 +73,20 @@ func updateQuotas(username string, project string, cpu string, memory string) (b
 		return false, genericApiError
 	}
 
-	var existingQuotas models.ResourceQuotaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&existingQuotas); err != nil {
+	json, err := gabs.ParseJSONBuffer(resp.Body)
+	if err != nil {
 		log.Println("error decoding json:", err, resp.StatusCode)
 		return false, genericApiError
 	}
 
-	existingQuotas.Items[0].Spec.Hard.CPU = cpu
-	existingQuotas.Items[0].Spec.Hard.Memory = memory + "Gi"
+	firstQuota := json.S("items").Index(0)
 
-	e, err := json.Marshal(existingQuotas.Items[0])
-	if (err != nil) {
-		log.Println("error encoding json:", err)
-		return false, genericApiError
-	}
+	firstQuota.SetP(cpu, "spec.hard.cpu")
+	firstQuota.SetP(memory + "Gi", "spec.hard.memory")
 
 	client, req = getOseHttpClient("PUT",
-		"api/v1/namespaces/" + project + "/resourcequotas/" + existingQuotas.Items[0].Metadata.Name,
-		bytes.NewReader(e))
+		"api/v1/namespaces/" + project + "/resourcequotas/" + firstQuota.Path("metadata.name").Data().(string),
+		bytes.NewReader(firstQuota.Bytes()))
 
 	resp, err = client.Do(req)
 	defer resp.Body.Close()

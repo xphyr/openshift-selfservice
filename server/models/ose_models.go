@@ -33,20 +33,6 @@ type PolicyBindingResponse struct {
 	} `json:"roleBindings"`
 }
 
-type ResourceQuotaResponse struct {
-	Items []struct {
-		Metadata struct {
-				 Name string `json:"name"`
-			 } `json:"metadata"`
-		Spec     struct {
-				 Hard struct {
-					      CPU    string `json:"cpu"`
-					      Memory string `json:"memory"`
-				      } `json:"hard"`
-			 } `json:"spec"`
-	} `json:"items"`
-}
-
 type ProjectResponse struct {
 	Kind       string `json:"kind"`
 	APIVersion string `json:"apiVersion"`
