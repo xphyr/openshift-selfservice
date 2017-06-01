@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"github.com/oscp/openshift-selfservice/server/models"
+	"github.com/Jeffail/gabs"
 )
 
 func newProjectHandler(c *gin.Context) {
@@ -222,28 +223,27 @@ func createOrUpdateMetadata(project string, billing string, megaid string, usern
 		return false, genericApiError
 	}
 
-	projectConfig := models.ProjectResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(&projectConfig); err != nil {
+	json, err := gabs.ParseJSONBuffer(resp.Body)
+	if err != nil {
 		log.Println("error decoding json:", err, resp.StatusCode)
 		return false, genericApiError
 	}
 
-	projectConfig.Metadata.Annotations.BillingNr = billing
-	projectConfig.Metadata.Annotations.Requester = username
+	log.Println(json.String())
+
+	annotations := json.Path("metadata.annotations")
+	annotations.Set(billing, "openshift.io/kontierung-element")
+	annotations.Set(username, "openshift.io/requester")
 
 	if (len(megaid) > 0) {
-		projectConfig.Metadata.Annotations.MegaId = megaid
+		annotations.Set(megaid, "openshift.io/MEGAID")
 	}
 
-	e, err := json.Marshal(projectConfig)
-	if (err != nil) {
-		log.Println("error encoding json:", err)
-		return false, genericApiError
-	}
+	log.Println(json.String())
 
 	client, req = getOseHttpClient("PUT",
 		"api/v1/namespaces/" + project,
-		bytes.NewReader(e))
+		bytes.NewReader(json.Bytes()))
 
 	resp, err = client.Do(req)
 	defer resp.Body.Close()
