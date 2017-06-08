@@ -1,7 +1,6 @@
 package gluster
 
 import (
-	"fmt"
 	"os/exec"
 	"log"
 	"strings"
@@ -16,13 +15,11 @@ var BasePath string
 var Secret string
 
 func getExistingLvForProject(project string) (int, error) {
-	cmd := fmt.Sprintf("lvs | grep lv_%v")
-
-	out, err := exec.Command("bash", "-c", cmd).Output()
+	out, err := exec.Command("bash", "-c", "lvs").Output()
 	if err != nil {
-		log.Println("Could not count existing lvs for a project: ", project, err.Error())
+		log.Println("Could not count existing lvs for a project:", project, err.Error())
 		return -1, err
 	}
 
-	return len(strings.Split(string(out), "\n")), nil
+	return strings.Count(string(out), "lv" + project) + 1, nil
 }

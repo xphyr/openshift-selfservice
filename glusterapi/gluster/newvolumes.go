@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"github.com/oscp/openshift-selfservice/glusterapi/models"
 	"encoding/json"
-	"io/ioutil"
 )
 
 const (
@@ -72,8 +71,8 @@ func createLvOnAllServers(project string, size string) (bool, string) {
 		return false, commandExecutionError
 	}
 
-	mountPoint := fmt.Sprintf("%v/%v/%v", BasePath, project, pvNumber)
-	lvName := fmt.Sprintf("lv_%v_%v", project, pvNumber)
+	mountPoint := fmt.Sprintf("%v/%v/pv%v", BasePath, project, pvNumber)
+	lvName := fmt.Sprintf("lv_%v_pv%v", project, pvNumber)
 
 	// Create the lv on all other gluster servers
 	ok, msg := createLvOnOtherServers(size, mountPoint, lvName)
@@ -117,18 +116,25 @@ func createLvOnOtherServers(size string, mountPoint string, lvName string) (bool
 		req.SetBasicAuth("GLUSTER_API", Secret)
 
 		resp, err := client.Do(req)
-		defer resp.Body.Close()
 		if (err != nil || resp.StatusCode != http.StatusOK) {
-			body, _ := ioutil.ReadAll(resp.Body)
-			log.Println("Remote did not respond with OK", resp.StatusCode, body)
+			if (resp != nil){
+				log.Println("Remote did not respond with OK", resp.StatusCode)
+			} else {
+				log.Println("Connection to remote not possible", r, err.Error())
+			}
 			return false, commandExecutionError
 		}
+		resp.Body.Close()
 	}
 
 	return true, ""
 }
 
 func CreateLvOnPool(size string, mountPoint string, lvName string) (bool, string) {
+	if (len(size) == 0 || len(mountPoint) == 0 || len(lvName) == 0) {
+		return false, "Not all input values provided"
+	}
+
 	commands := []string{
 		// Create a directory
 		fmt.Sprintf("mkdir -p %v", mountPoint),

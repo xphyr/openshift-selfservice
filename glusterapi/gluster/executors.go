@@ -16,7 +16,9 @@ func getGlusterPeerServers() ([]string, error) {
 	lines := strings.Split(string(out), "\n")
 	servers := []string{}
 	for _, l := range lines {
-		servers = append(servers, strings.Replace(l, "Hostname: ", "", -1))
+		if (len(l) > 0) {
+			servers = append(servers, strings.Replace(l, "Hostname: ", "", -1))
+		}
 	}
 
 	return servers, nil
