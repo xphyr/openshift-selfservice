@@ -14,12 +14,20 @@ var VgName string
 var BasePath string
 var Secret string
 
-func getExistingLvForProject(project string) (int, error) {
-	out, err := exec.Command("bash", "-c", "lvs").Output()
-	if err != nil {
-		log.Println("Could not count existing lvs for a project:", project, err.Error())
-		return -1, err
+func getGlusterPeerServers() ([]string, error) {
+	out, err := exec.Command("bash", "-c", "gluster peer status | grep Hostname").Output()
+	if (err != nil) {
+		log.Println("Error getting other gluster servers", err.Error())
+		return []string{}, err
 	}
 
-	return strings.Count(string(out), "lv" + project) + 1, nil
+	lines := strings.Split(string(out), "\n")
+	servers := []string{}
+	for _, l := range lines {
+		if (len(l) > 0) {
+			servers = append(servers, strings.Replace(l, "Hostname: ", "", -1))
+		}
+	}
+
+	return servers, nil
 }

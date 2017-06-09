@@ -9,128 +9,73 @@ import (
 	"bytes"
 	"github.com/oscp/openshift-selfservice/glusterapi/models"
 	"encoding/json"
+	"os/exec"
+	"errors"
 )
 
 const (
-	suffixWrongError = "Invalid size. Size must be int followed by suffix (e.g. 100M). Allowed suffixes are 'G/M'. You sent: "
+	suffixWrongError = "Invalid size. Size must be int followed by suffix (e.g. 100M). Allowed suffixes are 'G/M'. You sent: %v"
 	commandExecutionError = "Error running command, see logs for details"
 )
 
-func CreateVolume(project string, size string) (bool, string) {
-	isOk, msg := validateSizeInput(size)
-	if (!isOk) {
-		log.Print("Aborting...", msg)
-		return isOk, msg
+func CreateVolume(project string, size string) (error) {
+	if err := validateSizeInput(size); err != nil {
+		return err
 	}
 
-	// Create lvs on pool on all gluster servers
-	ok, msg := createLvOnAllServers(project, size)
-	if (!ok) {
-		return ok, msg
-	}
-
-	// Create gluster volume
-
-	return true, ""
-}
-
-func validateSizeInput(size string) (bool, string) {
-	log.Println("Checking size of", size)
-
-	if (strings.HasSuffix(size, "M")) {
-		sizeInt, err := strconv.Atoi(strings.Replace(size, "M", "", 1))
-		if (err != nil) {
-			return false, suffixWrongError + size
-		}
-
-		if (sizeInt <= MaxMB) {
-			return true, ""
-		} else {
-			return false, "Your size is to big for suffix 'M' use 'G' instead"
-		}
-	}
-	if (strings.HasSuffix(size, "G")) {
-		sizeInt, err := strconv.Atoi(strings.Replace(size, "G", "", 1))
-		if (err != nil) {
-			return false, suffixWrongError + size
-		}
-
-		if (sizeInt > MaxGB) {
-			return false, fmt.Sprintf("Max allowed size exceeded. Max allowed is: %vG", MaxGB)
-		}
-
-		return true, ""
-	}
-
-	return false, suffixWrongError + size
-}
-
-func createLvOnAllServers(project string, size string) (bool, string) {
 	pvNumber, err := getExistingLvForProject(project)
 	if (err != nil) {
-		return false, commandExecutionError
+		return err
 	}
 
 	mountPoint := fmt.Sprintf("%v/%v/pv%v", BasePath, project, pvNumber)
 	lvName := fmt.Sprintf("lv_%v_pv%v", project, pvNumber)
 
-	// Create the lv on all other gluster servers
-	ok, msg := createLvOnOtherServers(size, mountPoint, lvName)
-	if (!ok) {
-		return ok, msg
+	// Create lvs on pool on all gluster servers
+	if err := createLvOnAllServers(size, mountPoint, lvName); err != nil {
+		return err
 	}
 
-	// Create the lv locally
-	ok, msg = CreateLvOnPool(size, mountPoint, lvName)
-	if (!ok) {
-		return ok, msg
+	// Create gluster volume
+	if err := createGlusterVolume(project, size); err != nil {
+		return err
 	}
 
 	return true, ""
 }
 
-func createLvOnOtherServers(size string, mountPoint string, lvName string) (bool, string) {
-	remotes, err := getGlusterPeerServers()
-	if (err != nil) {
-		return false, commandExecutionError
-	}
+func validateSizeInput(size string) (error) {
+	log.Println("Checking size of", size)
 
-	p := models.CreateLVCommand{
-		LvName: lvName,
-		MountPoint: mountPoint,
-		Size: size,
-	}
-	b := new(bytes.Buffer)
-	err = json.NewEncoder(b).Encode(p)
-	if (err != nil) {
-		log.Println("Error encoding json", err.Error())
-		return false, commandExecutionError
-	}
-
-	// Execute the commands remote via API
-	client := &http.Client{}
-	for _, r := range remotes {
-		log.Println("Going to create lv on remote:", r)
-
-		req, _ := http.NewRequest("POST", fmt.Sprintf("http://%v:%v/sec/lv", r, Port), b)
-		req.SetBasicAuth("GLUSTER_API", Secret)
-
-		resp, err := client.Do(req)
-		if (err != nil || resp.StatusCode != http.StatusOK) {
-			if (resp != nil){
-				log.Println("Remote did not respond with OK", resp.StatusCode)
-			} else {
-				log.Println("Connection to remote not possible", r, err.Error())
-			}
-			return false, commandExecutionError
+	if (strings.HasSuffix(size, "M")) {
+		sizeInt, err := strconv.Atoi(strings.Replace(size, "M", "", 1))
+		if (err != nil) {
+			return fmt.Errorf(suffixWrongError, size)
 		}
-		resp.Body.Close()
+
+		if (sizeInt <= MaxMB) {
+			return nil
+		} else {
+			return errors.New("Your size is to big for suffix 'M' use 'G' instead")
+		}
+	}
+	if (strings.HasSuffix(size, "G")) {
+		sizeInt, err := strconv.Atoi(strings.Replace(size, "G", "", 1))
+		if (err != nil) {
+			return fmt.Errorf(suffixWrongError, size)
+		}
+
+		if (sizeInt > MaxGB) {
+			return fmt.Errorf("Max allowed size exceeded. Max allowed is: %vG", MaxGB)
+		}
+
+		return nil
 	}
 
-	return true, ""
+	return fmt.Errorf(suffixWrongError, size)
 }
 
-func CreateLvOnPool(size string, mountPoint string, lvName string) (bool, string) {
+func CreateLvOnPool(size string, mountPoint string, lvName string) (error) {
 	if (len(size) == 0 || len(mountPoint) == 0 || len(lvName) == 0) {
 		return false, "Not all input values provided"
 	}
@@ -170,4 +115,87 @@ func CreateLvOnPool(size string, mountPoint string, lvName string) (bool, string
 	//}
 
 	return true, ""
+}
+
+func getExistingLvForProject(project string) (int, error) {
+	out, err := exec.Command("bash", "-c", "lvs").Output()
+	if err != nil {
+		return -1, fmt.Errorf("Could not count existing lvs for a project: %v. Error: %v", project, err.Error())
+	}
+
+	return strings.Count(string(out), "lv" + project) + 1, nil
+}
+
+func createLvOnAllServers(size string, mountPoint string, lvName string) (error) {
+	// Create the lv on all other gluster servers
+	if err := createLvOnOtherServers(size, mountPoint, lvName); err != nil {
+		return err
+	}
+
+	// Create the lv locally
+	if err := CreateLvOnPool(size, mountPoint, lvName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createLvOnOtherServers(size string, mountPoint string, lvName string) (error) {
+	remotes, err := getGlusterPeerServers()
+	if (err != nil) {
+		return errors.New(commandExecutionError)
+	}
+
+	p := models.CreateLVCommand{
+		LvName: lvName,
+		MountPoint: mountPoint,
+		Size: size,
+	}
+	b := new(bytes.Buffer)
+
+	if err = json.NewEncoder(b).Encode(p); err != nil) {
+		log.Println("Error encoding json", err.Error())
+		return errors.New(commandExecutionError)
+	}
+
+	// Execute the commands remote via API
+	client := &http.Client{}
+	for _, r := range remotes {
+		log.Println("Going to create lv on remote:", r)
+
+		req, _ := http.NewRequest("POST", fmt.Sprintf("http://%v:%v/sec/lv", r, Port), b)
+		req.SetBasicAuth("GLUSTER_API", Secret)
+
+		resp, err := client.Do(req)
+		if (err != nil || resp.StatusCode != http.StatusOK) {
+			if (resp != nil){
+				log.Println("Remote did not respond with OK", resp.StatusCode)
+			} else {
+				log.Println("Connection to remote not possible", r, err.Error())
+			}
+			return errors.New(commandExecutionError)
+		}
+		resp.Body.Close()
+	}
+
+	return nil
+}
+
+func createGlusterVolume() (error) {
+	// Create a gluster volume
+	// gluster volume create vol_ssd replica 2 devglusternode01:/gluster/ssd1/brick1 devglusternode02:/gluster/ssd1/brick1
+	// gluster volume start vol_ssd
+	volCmd := fmt.Sprintf("gluster volume create %v replica %v ")
+
+	// Append all servers here
+	servers :=
+
+
+	out, err := exec.Command("bash", "-c", "lvs").Output()
+	if err != nil {
+		log.Println("Could not count existing lvs for a project:", project, err.Error())
+		return -1, err
+	}
+
+
 }

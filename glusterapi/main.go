@@ -43,23 +43,29 @@ func main() {
 
 	// /sec/volume = Create all the necessary things on all gluster servers for a new volume
 	sec.POST("/volume", func(c *gin.Context) {
-		isOk, msg := gluster.CreateVolume("ose-mon-a", "101M")
-
-		c.JSON(200, gin.H{
-			"isOk": isOk,
-			"message": msg,
-		})
+		if err := gluster.CreateVolume("ose-mon-a", "101M"); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Volume created",
+			})
+		}
 	})
 
 	// /sec/lv = Create LV on local server
 	sec.POST("/lv", func(c *gin.Context) {
 		var json models.CreateLVCommand
 		if c.BindJSON(&json) == nil {
-			ok, msg := gluster.CreateLvOnPool(json.Size, json.MountPoint, json.LvName)
-			if (ok) {
-				c.JSON(http.StatusOK, msg)
+			if err := gluster.CreateLvOnPool(json.Size, json.MountPoint, json.LvName); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message": err.Error(),
+				})
 			} else {
-				c.JSON(http.StatusInternalServerError, msg)
+				c.JSON(http.StatusOK, gin.H{
+					"message": "LV created",
+				})
 			}
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
