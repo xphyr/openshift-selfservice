@@ -112,24 +112,24 @@ curl <yourserver>:<port>/volume/<volume-name>
 {"totalKiloBytes":123520,"usedKiloBytes":5472}
 ```
 
-The check endpoint returns if the current %-usage is below the defined treshold:
+The check endpoint returns if the current %-usage is below the defined threshold:
 ```bash
 
 # Successful response
-curl -i <yourserver>:<port>/volume/<volume-name>/check\?treshold=20
+curl -i <yourserver>:<port>/volume/<volume-name>/check\?threshold=20
 HTTP/1.1 200 OK
 Content-Type: application/json; charset=utf-8
 Date: Mon, 12 Jun 2017 14:23:53 GMT
 Content-Length: 38
 
-{"message":"Usage is below treshold"}
+{"message":"Usage is below threshold"}
 
 # Error response
-curl -i <yourserver>:<port>/volume/<volume-name>/check\?treshold=3
+curl -i <yourserver>:<port>/volume/<volume-name>/check\?threshold=3
 
 HTTP/1.1 400 Bad Request
 Content-Type: application/json; charset=utf-8
 Date: Mon, 12 Jun 2017 14:23:37 GMT
 Content-Length: 70
-{"message":"Error used 4.430051813471502 is bigger than treshold: 3"}
+{"message":"Error used 4.430051813471502 is bigger than threshold: 3"}
 ```

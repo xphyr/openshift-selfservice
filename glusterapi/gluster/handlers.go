@@ -124,20 +124,20 @@ func VolumeInfoHandler(c *gin.Context) {
 
 func CheckVolumeHandler(c *gin.Context) {
 	pvName := c.Param("pvname")
-	treshold := c.Query("treshold")
-	if len(pvName) == 0 || len(treshold) == 0 {
+	threshold := c.Query("threshold")
+	if len(pvName) == 0 || len(threshold) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
 		return
 	}
 
-	err := checkVolumeUsage(pvName, treshold)
+	err := checkVolumeUsage(pvName, threshold)
 	if (err != nil) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
 	} else {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Usage is below treshold",
+			"message": "Usage is below threshold",
 		})
 	}
 }

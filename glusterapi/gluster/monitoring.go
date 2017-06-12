@@ -51,10 +51,10 @@ func parseOutput(stdOut string) (*models.VolInfo, error) {
 	}, nil
 }
 
-func checkVolumeUsage(pvName string, treshold string) (error) {
-	t, err := strconv.ParseFloat(treshold, 64)
+func checkVolumeUsage(pvName string, threshold string) (error) {
+	t, err := strconv.ParseFloat(threshold, 64)
 	if (err != nil) {
-		return errors.New("Wrong treshold. Is not a valid integer")
+		return errors.New("Wrong threshold. Is not a valid integer")
 	}
 
 	volInfo, err := getVolumeUsage(pvName)
@@ -64,7 +64,7 @@ func checkVolumeUsage(pvName string, treshold string) (error) {
 
 	usedPercentage := 100 / float64(volInfo.TotalKiloBytes) * float64(volInfo.UsedKiloBytes)
 	if (usedPercentage > t) {
-		return fmt.Errorf("Error used %v is bigger than treshold: %v", usedPercentage, t)
+		return fmt.Errorf("Error used %v is bigger than threshold: %v", usedPercentage, t)
 	}
 
 	return nil
