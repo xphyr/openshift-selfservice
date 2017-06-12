@@ -18,7 +18,11 @@ const (
 	commandExecutionError = "Error running command, see logs for details"
 )
 
-func CreateVolume(project string, size string) (error) {
+func createVolume(project string, size string) (error) {
+	if (len(size) == 0 || len(project) == 0) {
+		return errors.New("Not all input values provided")
+	}
+
 	if err := validateSizeInput(size); err != nil {
 		return err
 	}
@@ -37,11 +41,46 @@ func CreateVolume(project string, size string) (error) {
 	}
 
 	// Create gluster volume
-	if err := createGlusterVolume(project, size); err != nil {
+	if err := createGlusterVolume(project, pvNumber, mountPoint); err != nil {
 		return err
 	}
 
-	return true, ""
+	return nil
+}
+
+func createLvOnPool(size string, mountPoint string, lvName string) (error) {
+	commands := []string{
+		// Create a directory
+		fmt.Sprintf("mkdir -p %v", mountPoint),
+
+		// Create a lv
+		fmt.Sprintf("lvcreate -V %v -T %v/%v -n %v", size, VgName, PoolName, lvName),
+
+		// Create file system
+		fmt.Sprintf("mkfs.xfs -i size=512 -n size=8192 /dev/%v/%v", VgName, lvName),
+
+		// Fstab
+		fmt.Sprintf("echo \"/dev/%v/%v %v xfs rw,inode64,noatime,nouuid 1 2\" | tee -a /etc/fstab > /dev/null ",
+			VgName,
+			lvName,
+			mountPoint),
+
+		// Mount
+		fmt.Sprintf("mount -o rw,inode64,noatime,nouuid /dev/%v/%v %v", VgName, lvName, mountPoint),
+
+		// Create brick folder
+		fmt.Sprintf("mkdir %v/brick", mountPoint),
+
+		// Handle Selinux
+		fmt.Sprintf("semanage fcontext -a -t glusterd_brick_t %v/brick", mountPoint),
+		fmt.Sprintf("restorecon -Rv %v/brick", mountPoint),
+	}
+
+	if err := executeCommandsLocally(commands); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func validateSizeInput(size string) (error) {
@@ -75,55 +114,14 @@ func validateSizeInput(size string) (error) {
 	return fmt.Errorf(suffixWrongError, size)
 }
 
-func CreateLvOnPool(size string, mountPoint string, lvName string) (error) {
-	if (len(size) == 0 || len(mountPoint) == 0 || len(lvName) == 0) {
-		return false, "Not all input values provided"
-	}
-
-	commands := []string{
-		// Create a directory
-		fmt.Sprintf("mkdir -p %v", mountPoint),
-
-		// Create a lv
-		fmt.Sprintf("lvcreate -V %v -T %v/%v -n %v", size, VgName, PoolName, lvName),
-
-		// Create file system
-		fmt.Sprintf("mkfs.xfs -i size=512 -n size=8192 /dev/%v/%v", VgName, lvName),
-
-		// Fstab
-		fmt.Sprintf("echo \"/dev/%v/%v %v xfs rw,inode64,noatime,nouuid 1 2\" | tee -a /etc/fstab > /dev/null ",
-			VgName,
-			lvName,
-			mountPoint),
-
-		// Mount
-		fmt.Sprintf("mount -o rw,inode64,noatime,nouuid /dev/%v/%v %v", VgName, lvName, mountPoint),
-
-		// Handle Selinux
-		fmt.Sprintf("semanage fcontext -a -t glusterd_brick_t %v", mountPoint),
-		fmt.Sprintf("restorecon -Rv %v", mountPoint),
-	}
-
-	log.Println("Going to execute the following commands: ")
-	for _, c := range commands {
-		log.Println(c)
-	}
-
-	//ok, msg := executeCommandsLocally(commands)
-	//if (!ok) {
-	//	return ok, msg
-	//}
-
-	return true, ""
-}
-
 func getExistingLvForProject(project string) (int, error) {
 	out, err := exec.Command("bash", "-c", "lvs").Output()
 	if err != nil {
-		return -1, fmt.Errorf("Could not count existing lvs for a project: %v. Error: %v", project, err.Error())
+		log.Printf("Could not count existing lvs for a project: %v. Error: %v", project, err.Error())
+		return -1, errors.New(commandExecutionError)
 	}
 
-	return strings.Count(string(out), "lv" + project) + 1, nil
+	return strings.Count(string(out), "lv_" + project) + 1, nil
 }
 
 func createLvOnAllServers(size string, mountPoint string, lvName string) (error) {
@@ -133,7 +131,7 @@ func createLvOnAllServers(size string, mountPoint string, lvName string) (error)
 	}
 
 	// Create the lv locally
-	if err := CreateLvOnPool(size, mountPoint, lvName); err != nil {
+	if err := createLvOnPool(size, mountPoint, lvName); err != nil {
 		return err
 	}
 
@@ -143,7 +141,7 @@ func createLvOnAllServers(size string, mountPoint string, lvName string) (error)
 func createLvOnOtherServers(size string, mountPoint string, lvName string) (error) {
 	remotes, err := getGlusterPeerServers()
 	if (err != nil) {
-		return errors.New(commandExecutionError)
+		return err
 	}
 
 	p := models.CreateLVCommand{
@@ -153,7 +151,7 @@ func createLvOnOtherServers(size string, mountPoint string, lvName string) (erro
 	}
 	b := new(bytes.Buffer)
 
-	if err = json.NewEncoder(b).Encode(p); err != nil) {
+	if err = json.NewEncoder(b).Encode(p); err != nil {
 		log.Println("Error encoding json", err.Error())
 		return errors.New(commandExecutionError)
 	}
@@ -168,7 +166,7 @@ func createLvOnOtherServers(size string, mountPoint string, lvName string) (erro
 
 		resp, err := client.Do(req)
 		if (err != nil || resp.StatusCode != http.StatusOK) {
-			if (resp != nil){
+			if (resp != nil) {
 				log.Println("Remote did not respond with OK", resp.StatusCode)
 			} else {
 				log.Println("Connection to remote not possible", r, err.Error())
@@ -181,21 +179,38 @@ func createLvOnOtherServers(size string, mountPoint string, lvName string) (erro
 	return nil
 }
 
-func createGlusterVolume() (error) {
+func createGlusterVolume(project string, pvNumber int, mountPoint string) (error) {
 	// Create a gluster volume
 	// gluster volume create vol_ssd replica 2 devglusternode01:/gluster/ssd1/brick1 devglusternode02:/gluster/ssd1/brick1
 	// gluster volume start vol_ssd
-	volCmd := fmt.Sprintf("gluster volume create %v replica %v ")
+	volCmd := fmt.Sprintf("gluster volume create vol_%v_pv%v replica %v ", project, pvNumber, Replicas)
 
-	// Append all servers here
-	servers :=
-
-
-	out, err := exec.Command("bash", "-c", "lvs").Output()
-	if err != nil {
-		log.Println("Could not count existing lvs for a project:", project, err.Error())
-		return -1, err
+	// Add all remote servers
+	servers, err := getGlusterPeerServers()
+	if (err != nil) {
+		return err
 	}
 
+	localIp, err := getLocalServersIp()
+	if (err != nil) {
+		return err
+	}
 
+	servers = append(servers, localIp)
+
+	for _, r := range servers {
+		volCmd += fmt.Sprintf("%v:%v/brick ", r, mountPoint)
+	}
+
+	commands := []string{
+		volCmd,
+
+		fmt.Sprintf("gluster volume start vol_%v_pv%v", project, pvNumber),
+	}
+
+	if err := executeCommandsLocally(commands); err != nil {
+		return err
+	}
+
+	return nil
 }

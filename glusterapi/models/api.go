@@ -5,3 +5,8 @@ type CreateLVCommand struct {
 	MountPoint string `json:"mountPoint"`
 	LvName     string `json:"lvName"`
 }
+
+type CreateVolumeCommand struct {
+	Project string `json:"project"`
+	Size    string `json:"size"`
+}
