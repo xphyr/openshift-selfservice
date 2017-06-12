@@ -102,3 +102,43 @@ func GrowLVHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
 	}
 }
+
+func VolumeInfoHandler(c *gin.Context) {
+	pvName := c.Param("pvname")
+	if len(pvName) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
+		return
+	}
+
+	volInfo, err := getVolumeUsage(pvName)
+	if (err != nil) {
+		log.Print("Error getting volume information", err.Error())
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK, volInfo)
+	}
+}
+
+func CheckVolumeHandler(c *gin.Context) {
+	pvName := c.Param("pvname")
+	treshold := c.Query("treshold")
+	if len(pvName) == 0 || len(treshold) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
+		return
+	}
+
+	err := checkVolumeUsage(pvName, treshold)
+	if (err != nil) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Usage is below treshold",
+		})
+	}
+}
+

@@ -12,6 +12,11 @@ type CreateVolumeCommand struct {
 }
 
 type GrowVolumeCommand struct {
-	PvName string `json:"pvName"`
-	GrowSize    string `json:"growSize"`
+	PvName   string `json:"pvName"`
+	GrowSize string `json:"growSize"`
+}
+
+type VolInfo struct {
+	TotalKiloBytes int `json:"totalKiloBytes"`
+	UsedKiloBytes  int `json:"usedKiloBytes"`
 }

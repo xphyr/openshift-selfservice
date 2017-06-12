@@ -30,8 +30,11 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// TODO: Usage endpoint
+	// Public endpoint for volume monitoring
+	r.GET("/volume/:pvname", gluster.VolumeInfoHandler)
+	r.GET("/volume/:pvname/check", gluster.CheckVolumeHandler)
 
+	// Secured endpoints with basic auth
 	sec := r.Group("/sec", gin.BasicAuth(gin.Accounts{
 		"GLUSTER_API":    gluster.Secret,
 	}))
