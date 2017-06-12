@@ -10,3 +10,8 @@ type CreateVolumeCommand struct {
 	Project string `json:"project"`
 	Size    string `json:"size"`
 }
+
+type GrowVolumeCommand struct {
+	PvName string `json:"pvName"`
+	GrowSize    string `json:"growSize"`
+}

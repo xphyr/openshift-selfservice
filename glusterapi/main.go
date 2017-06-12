@@ -35,12 +35,14 @@ func main() {
 	sec := r.Group("/sec", gin.BasicAuth(gin.Accounts{
 		"GLUSTER_API":    gluster.Secret,
 	}))
-
-	// /sec/volume = Create all the necessary things on all gluster servers for a new volume
+	// /sec/volume 		= Create all the necessary things on all gluster servers for a new volume
+	// /sec/volume/grow 	= Grows an existing volume on all the gluster servers
+	// /sec/lv 		= Create LV on local server
+	// /sec/lv/grow 	= Grows an existing LV on the local server
 	sec.POST("/volume", gluster.CreateVolumeHandler)
-
-	// /sec/lv = Create LV on local server
 	sec.POST("/lv", gluster.CreateLVHandler)
+	sec.POST("/volume/grow", gluster.GrowVolumeHandler)
+	sec.POST("/lv/grow", gluster.GrowLVHandler)
 
 	log.Printf("Gluster api is running on: %v", gluster.Port)
 	r.Run(":" + strconv.Itoa(gluster.Port))
