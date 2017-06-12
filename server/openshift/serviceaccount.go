@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"log"
 	"io/ioutil"
+	"errors"
 )
 
 func newServiceAccountHandler(c *gin.Context) {
@@ -14,36 +15,39 @@ func newServiceAccountHandler(c *gin.Context) {
 	serviceaccount := c.PostForm("serviceaccount")
 	username := common.GetUserName(c)
 
-	isOk, msg := validateNewServiceAccount(username, project, serviceaccount)
-	if (!isOk) {
+	if err := validateNewServiceAccount(username, project, serviceaccount); err != nil {
 		c.HTML(http.StatusOK, newServiceAccountUrl, gin.H{
-			"Error": msg,
+			"Error": err.Error(),
 		})
 		return
 	}
 
-	isOk, msg = createNewServiceAccount(username, project, serviceaccount)
+	if err := createNewServiceAccount(username, project, serviceaccount); err != nil {
+		c.HTML(http.StatusOK, newServiceAccountUrl, gin.H{
+			"Error": err.Error(),
+		})
+	} else {
 
-	c.HTML(http.StatusOK, newServiceAccountUrl, gin.H{
-		"Success": msg,
-	})
+		c.HTML(http.StatusOK, newServiceAccountUrl, gin.H{
+			"Success": "Der Service Account wurde angelegt",
+		})
+	}
 }
 
-func validateNewServiceAccount(username string, project string, serviceAccountName string) (bool, string) {
+func validateNewServiceAccount(username string, project string, serviceAccountName string) (error) {
 	if (len(serviceAccountName) == 0) {
-		return false, "Service Account muss angegeben werden"
+		return errors.New("Service Account muss angegeben werden")
 	}
 
 	// Validate permissions
-	isOk, msg := checkAdminPermissions(username, project)
-	if (!isOk) {
-		return false, msg
+	if err := checkAdminPermissions(username, project); err != nil {
+		return err
 	}
 
-	return true, ""
+	return nil
 }
 
-func createNewServiceAccount(username string, project string, serviceaccount string) (bool, string) {
+func createNewServiceAccount(username string, project string, serviceaccount string) (error) {
 	p := newObjectRequest("ServiceAccount", serviceaccount)
 
 	client, req := getOseHttpClient("POST",
@@ -55,12 +59,10 @@ func createNewServiceAccount(username string, project string, serviceaccount str
 
 	if (resp.StatusCode == http.StatusCreated) {
 		log.Print(username + " created a new service account: " + serviceaccount + " on project " + project)
-
-		return true, "Service Account wurde angelegt"
+		return nil
 	} else {
 		errMsg, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Error creating new project:", err, resp.StatusCode, string(errMsg))
-
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 }

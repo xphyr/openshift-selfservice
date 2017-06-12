@@ -9,6 +9,7 @@ import (
 	"github.com/Jeffail/gabs"
 	"bytes"
 	"io/ioutil"
+	"errors"
 )
 
 func editQuotasHandler(c *gin.Context) {
@@ -17,23 +18,26 @@ func editQuotasHandler(c *gin.Context) {
 	memory := c.PostForm("memory")
 	username := common.GetUserName(c)
 
-	isOk, msg := validateEditQuotas(username, project, cpu, memory)
-
-	if (!isOk) {
+	if err := validateEditQuotas(username, project, cpu, memory); err != nil {
 		c.HTML(http.StatusOK, editQuotasUrl, gin.H{
-			"Error": msg,
+			"Error": err.Error(),
 		})
 		return
 	}
 
-	isOk, msg = updateQuotas(username, project, cpu, memory)
+	if err := updateQuotas(username, project, cpu, memory); err != nil {
+		c.HTML(http.StatusOK, editQuotasUrl, gin.H{
+			"Error": err.Error(),
+		})
+		return
+	}
 
 	c.HTML(http.StatusOK, editQuotasUrl, gin.H{
 		"Success": "Die neuen Quotas wurden gespeichert",
 	})
 }
 
-func validateEditQuotas(username string, project string, cpu string, memory string) (bool, string) {
+func validateEditQuotas(username string, project string, cpu string, memory string) (error) {
 	maxCPU := os.Getenv("MAX_CPU")
 	maxMemory := os.Getenv("MAX_MEMORY")
 
@@ -43,40 +47,37 @@ func validateEditQuotas(username string, project string, cpu string, memory stri
 
 	// Validate user input
 	if (len(project) == 0) {
-		return false, "Projekt muss angegeben werden"
+		return errors.New("Projekt muss angegeben werden")
 	}
-	isOk, msg := common.ValidateIntInput(maxCPU, cpu)
-	if (!isOk) {
-		return false, msg
+	if err := common.ValidateIntInput(maxCPU, cpu); err != nil {
+		return err
 	}
-	isOk, msg = common.ValidateIntInput(maxMemory, memory)
-	if (!isOk) {
-		return false, msg
+	if err := common.ValidateIntInput(maxMemory, memory); err != nil {
+		return err
 	}
 
 	// Validate permissions
-	isOk, msg = checkAdminPermissions(username, project)
-	if (!isOk) {
-		return false, msg
+	if err := checkAdminPermissions(username, project); err != nil {
+		return err
 	}
 
-	return true, ""
+	return nil
 }
 
-func updateQuotas(username string, project string, cpu string, memory string) (bool, string) {
+func updateQuotas(username string, project string, cpu string, memory string) (error) {
 	client, req := getOseHttpClient("GET", "api/v1/namespaces/" + project + "/resourcequotas", nil)
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 
 	if (err != nil) {
 		log.Println("Error from server: ", err.Error())
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 
 	json, err := gabs.ParseJSONBuffer(resp.Body)
 	if err != nil {
 		log.Println("error decoding json:", err, resp.StatusCode)
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 
 	firstQuota := json.S("items").Index(0)
@@ -93,11 +94,11 @@ func updateQuotas(username string, project string, cpu string, memory string) (b
 
 	if (resp.StatusCode == http.StatusOK) {
 		log.Println("User " + username + " changed quotas for the project " + project + ". CPU: " + cpu, ", Mem: " + memory)
-		return true, ""
+		return nil
 	} else {
 		errMsg, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Error updating resourceQuota:", err, resp.StatusCode, string(errMsg))
 
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 }

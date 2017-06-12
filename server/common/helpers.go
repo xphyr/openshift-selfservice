@@ -6,9 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"gopkg.in/appleboy/gin-jwt.v2"
 	"os"
+	"errors"
+	"fmt"
 )
 
-func ValidateIntInput(maxValue string, input string) (bool, string) {
+func ValidateIntInput(maxValue string, input string) (error) {
 	maxInt, err := strconv.Atoi(maxValue)
 	if (err != nil) {
 		log.Fatal("Could not parse 'MAX' value of", maxValue)
@@ -16,14 +18,14 @@ func ValidateIntInput(maxValue string, input string) (bool, string) {
 
 	inputInt, err := strconv.Atoi(input)
 	if (err != nil) {
-		return false, "Bitte eine gültige Zahl eintragen"
+		return errors.New("Bitte eine gültige Zahl eintragen")
 	}
 
 	if (inputInt > maxInt) {
-		return false, "Du kannst maximal " + maxValue + " eintragen"
+		return fmt.Errorf("Du kannst maximal %v eintragen", maxValue)
 	}
 
-	return true, ""
+	return nil
 }
 
 func GetUserName(c *gin.Context) string {

@@ -25,7 +25,7 @@ func init() {
 }
 
 func main() {
-	gin.SetMode(gin.DebugMode)
+	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -42,5 +42,6 @@ func main() {
 	// /sec/lv = Create LV on local server
 	sec.POST("/lv", gluster.CreateLVHandler)
 
+	log.Printf("Gluster api is running on: %v", gluster.Port)
 	r.Run(":" + strconv.Itoa(gluster.Port))
 }

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"github.com/Jeffail/gabs"
+	"errors"
 )
 
 func newProjectHandler(c *gin.Context) {
@@ -17,22 +18,20 @@ func newProjectHandler(c *gin.Context) {
 	megaid := c.PostForm("megaid")
 	username := common.GetUserName(c)
 
-	isOk, msg := validateNewProject(project, billing, false)
-	if (!isOk) {
+	if err := validateNewProject(project, billing, false); err != nil {
 		c.HTML(http.StatusOK, newProjectUrl, gin.H{
-			"Error": msg,
+			"Error": err.Error(),
 		})
 		return
 	}
 
-	isOk, msg = createNewProject(project, username, billing, megaid)
-	if (!isOk) {
+	if err := createNewProject(project, username, billing, megaid); err != nil {
 		c.HTML(http.StatusOK, newProjectUrl, gin.H{
-			"Error": msg,
+			"Success": "Das Projekt wurde erstellt",
 		})
 	} else {
 		c.HTML(http.StatusOK, newProjectUrl, gin.H{
-			"Success": msg,
+			"Error": err.Error(),
 		})
 	}
 }
@@ -45,23 +44,21 @@ func newTestProjectHandler(c *gin.Context) {
 	billing := "keine-verrechnung"
 	project = username + "-" + project
 
-	isOk, msg := validateNewProject(project, billing, true)
-	if (!isOk) {
+	if err := validateNewProject(project, billing, true); err != nil {
 		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
-			"Error": msg,
+			"Error": err.Error(),
 			"User": common.GetUserName(c),
 		})
 		return
 	}
-	isOk, msg = createNewProject(project, username, billing, "")
-	if (!isOk) {
+	if err := createNewProject(project, username, billing, ""); err != nil {
 		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
-			"Error": msg,
+			"Error": err.Error(),
 			"User": common.GetUserName(c),
 		})
 	} else {
 		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
-			"Success": msg,
+			"Success": "Das Test-Projekt wurde erstellt",
 			"User": common.GetUserName(c),
 		})
 	}
@@ -72,18 +69,16 @@ func updateBillingHandler(c *gin.Context) {
 	project := c.PostForm("project")
 	billing := c.PostForm("billing")
 
-	isOk, msg := validateBillingInformation(project, billing, username)
-	if (!isOk) {
+	if err := validateBillingInformation(project, billing, username); err != nil {
 		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
-			"Error": msg,
+			"Error": err.Error(),
 		})
 		return
 	}
 
-	isOk, msg = createOrUpdateMetadata(project, billing, "", username)
-	if (!isOk) {
+	if err := createOrUpdateMetadata(project, billing, "", username); err != nil {
 		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
-			"Error": msg,
+			"Error": err.Error(),
 		})
 	} else {
 		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
@@ -92,37 +87,36 @@ func updateBillingHandler(c *gin.Context) {
 	}
 }
 
-func validateNewProject(project string, billing string, isTestproject bool) (bool, string) {
+func validateNewProject(project string, billing string, isTestproject bool) (error) {
 	if (len(project) == 0) {
-		return false, "Projektname muss angegeben werden"
+		return errors.New("Projektname muss angegeben werden")
 	}
 
 	if (!isTestproject && len(billing) == 0) {
-		return false, "Kontierungsnummer muss angegeben werden"
+		return errors.New("Kontierungsnummer muss angegeben werden")
 	}
 
-	return true, ""
+	return nil
 }
 
-func validateBillingInformation(project string, billing string, username string) (bool, string) {
+func validateBillingInformation(project string, billing string, username string) (error) {
 	if (len(project) == 0) {
-		return false, "Projektname muss angegeben werden"
+		return errors.New("Projektname muss angegeben werden")
 	}
 
 	if (len(billing) == 0) {
-		return false, "Kontierungsnummer muss angegeben werden"
+		return errors.New("Kontierungsnummer muss angegeben werden")
 	}
 
 	// Validate permissions
-	isOk, msg := checkAdminPermissions(username, project)
-	if (!isOk) {
-		return false, msg
+	if err := checkAdminPermissions(username, project); err != nil {
+		return err
 	}
 
-	return true, ""
+	return nil
 }
 
-func createNewProject(project string, username string, billing string, megaid string) (bool, string) {
+func createNewProject(project string, username string, billing string, megaid string) (error) {
 	p := newObjectRequest("ProjectRequest", project)
 
 	client, req := getOseHttpClient("POST",
@@ -135,41 +129,39 @@ func createNewProject(project string, username string, billing string, megaid st
 	if (resp.StatusCode == http.StatusCreated) {
 		log.Print(username + " created a new project: " + project)
 
-	isOk, msg := changeProjectPermission(project, username)
-	if (!isOk) {
-		return isOk, msg
-	}
+		if err := changeProjectPermission(project, username); err != nil {
+			return err
+		}
 
-	isOk, msg = createOrUpdateMetadata(project, billing, megaid, username)
-	if (!isOk) {
-		return isOk, msg
-	} else {
-		return true, "Das neue Projekt wurde erstellt"
-	}
+		if err := createOrUpdateMetadata(project, billing, megaid, username); err != nil {
+			return err
+		} else {
+			return nil
+		}
 	} else {
 		if (resp.StatusCode == http.StatusConflict) {
-			return false, "Das Projekt existiert bereits"
+			return errors.New("Das Projekt existiert bereits")
 		}
 
 		errMsg, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Error creating new project:", err, resp.StatusCode, string(errMsg))
 
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 }
 
-func changeProjectPermission(project string, username string) (bool, string) {
+func changeProjectPermission(project string, username string) (error) {
 	// Get existing policybindings
-	policyBindings, msg := getPolicyBindings(project)
+	policyBindings, err := getPolicyBindings(project)
 
 	if (policyBindings == nil) {
-		return false, msg
+		return err
 	}
 
 	children, err := policyBindings.S("roleBindings").Children()
 	if (err != nil) {
 		log.Println("Unable to parse roleBindings", err.Error())
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 	for _, v := range children {
 		if (v.Path("name").Data().(string) == "admin") {
@@ -188,33 +180,33 @@ func changeProjectPermission(project string, username string) (bool, string) {
 
 	if (err != nil) {
 		log.Println("Error from server: ", err.Error())
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 
 	if (resp.StatusCode == http.StatusOK) {
 		log.Print(username + " is now admin of " + project)
-		return true, ""
+		return nil
 	} else {
 		errMsg, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Error updating project permissions:", err, resp.StatusCode, string(errMsg))
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 }
 
-func createOrUpdateMetadata(project string, billing string, megaid string, username string) (bool, string) {
+func createOrUpdateMetadata(project string, billing string, megaid string, username string) (error) {
 	client, req := getOseHttpClient("GET", "api/v1/namespaces/" + project, nil)
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 
 	if (err != nil) {
 		log.Println("Error from server: ", err.Error())
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 
 	json, err := gabs.ParseJSONBuffer(resp.Body)
 	if err != nil {
 		log.Println("error decoding json:", err, resp.StatusCode)
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 
 	annotations := json.Path("metadata.annotations")
@@ -234,11 +226,11 @@ func createOrUpdateMetadata(project string, billing string, megaid string, usern
 
 	if (resp.StatusCode == http.StatusOK) {
 		log.Println("User " + username + " changed changed config of project project " + project + ". Kontierungsnummer: " + billing, ", MegaID: " + megaid)
-		return true, ""
+		return nil
 	} else {
 		errMsg, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Error updating project config:", err, resp.StatusCode, string(errMsg))
 
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 }

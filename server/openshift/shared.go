@@ -10,6 +10,8 @@ import (
 	"io"
 	"github.com/oscp/openshift-selfservice/server/common"
 	"github.com/Jeffail/gabs"
+	"errors"
+	"fmt"
 )
 
 const (
@@ -55,11 +57,10 @@ func RegisterRoutes(r *gin.RouterGroup) {
 	r.POST("/openshift/newserviceaccount", newServiceAccountHandler)
 }
 
-func checkAdminPermissions(username string, project string) (bool, string) {
-	policyBindings, msg := getPolicyBindings(project)
-
-	if (policyBindings == nil) {
-		return false, msg
+func checkAdminPermissions(username string, project string) (error) {
+	policyBindings, err := getPolicyBindings(project)
+	if (err != nil) {
+		return err
 	}
 
 	// Check if user has admin-access
@@ -68,14 +69,14 @@ func checkAdminPermissions(username string, project string) (bool, string) {
 	children, err := policyBindings.S("roleBindings").Children()
 	if (err != nil) {
 		log.Println("Unable to parse roleBindings", err.Error())
-		return false, genericApiError
+		return errors.New(genericApiError)
 	}
 	for _, v := range children {
 		if (v.Path("name").Data().(string) == "admin") {
 			usernames, err := v.Path("roleBinding.userNames").Children()
 			if (err != nil) {
 				log.Println("Unable to parse roleBinding", err.Error())
-				return false, genericApiError
+				return errors.New(genericApiError)
 			}
 			for _, u := range usernames {
 				if (strings.ToLower(u.Data().(string)) == strings.ToLower(username)) {
@@ -91,34 +92,34 @@ func checkAdminPermissions(username string, project string) (bool, string) {
 	}
 
 	if (hasAccess) {
-		return true, ""
+		return nil
 	} else {
-		return false, "Du hast keine Admin Rechte auf dem Projekt. Bestehende Admins sind folgende Benutzer: " + admins
+		return fmt.Errorf("Du hast keine Admin Rechte auf dem Projekt. Bestehende Admins sind folgende Benutzer: %v", admins)
 	}
 }
 
-func getPolicyBindings(project string) (*gabs.Container, string) {
+func getPolicyBindings(project string) (*gabs.Container, error) {
 	client, req := getOseHttpClient("GET", "oapi/v1/namespaces/" + project + "/policybindings/:default", nil)
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 
 	if (err != nil) {
 		log.Println("Error from server: ", err.Error())
-		return nil, genericApiError
+		return nil, errors.New(genericApiError)
 	}
 
 	if (resp.StatusCode == 404) {
 		log.Println("Project was not found", project)
-		return nil, "Das Projekt existiert nicht"
+		return nil, errors.New("Das Projekt existiert nicht")
 	}
 
 	json, err := gabs.ParseJSONBuffer(resp.Body)
 	if (err != nil) {
 		log.Println("error parsing body of response:", err)
-		return nil, genericApiError
+		return nil, errors.New(genericApiError)
 	}
 
-	return json, ""
+	return json, nil
 }
 
 func getOseAddress(end string) string {
