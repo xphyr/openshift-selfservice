@@ -3,10 +3,11 @@ package main
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/oscp/openshift-selfservice/server/common"
-	"github.com/oscp/openshift-selfservice/server/openshift"
 	"log"
+
+	"github.com/gin-gonic/gin"
+	"github.com/oscp/cloud-selfservice-portal/server/common"
+	"github.com/oscp/cloud-selfservice-portal/server/openshift"
 )
 
 func main() {
@@ -50,6 +51,3 @@ func main() {
 	log.Println("Cloud SSP is running")
 	router.Run()
 }
-
-
-

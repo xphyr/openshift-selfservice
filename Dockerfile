@@ -1,8 +1,8 @@
 FROM golang:1.8
 
-WORKDIR /go/src/github.com/oscp/openshift-selfservice/server
+WORKDIR /go/src/github.com/oscp/cloud-selfservice-portal/server
 
-COPY . /go/src/github.com/oscp/openshift-selfservice
+COPY . /go/src/github.com/oscp/cloud-selfservice-portal
 
 RUN go get gopkg.in/gin-gonic/gin.v1 \
     && go get gopkg.in/appleboy/gin-jwt.v2 \

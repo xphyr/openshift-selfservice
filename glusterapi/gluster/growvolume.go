@@ -1,17 +1,18 @@
 package gluster
 
 import (
-	"errors"
 	"bytes"
 	"encoding/json"
-	"net/http"
+	"errors"
 	"fmt"
-	"github.com/oscp/openshift-selfservice/glusterapi/models"
 	"log"
+	"net/http"
+
+	"github.com/oscp/cloud-selfservice-portal/glusterapi/models"
 )
 
-func growVolume(pvName string, growSize string) (error) {
-	if (len(pvName) == 0 || len(growSize) == 0) {
+func growVolume(pvName string, growSize string) error {
+	if len(pvName) == 0 || len(growSize) == 0 {
 		return errors.New("Not all input values provided")
 	}
 
@@ -21,12 +22,12 @@ func growVolume(pvName string, growSize string) (error) {
 
 	if err := growLvOnAllServers(pvName, growSize); err != nil {
 		return err
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
-func growLvOnAllServers(pvName string, growSize string) (error) {
+func growLvOnAllServers(pvName string, growSize string) error {
 	// Create the lv on all other gluster servers
 	if err := growLvOnOtherServers(pvName, growSize); err != nil {
 		return err
@@ -40,14 +41,14 @@ func growLvOnAllServers(pvName string, growSize string) (error) {
 	return nil
 }
 
-func growLvOnOtherServers(pvName string, growSize string) (error) {
+func growLvOnOtherServers(pvName string, growSize string) error {
 	remotes, err := getGlusterPeerServers()
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 
 	p := models.GrowVolumeCommand{
-		PvName: pvName,
+		PvName:   pvName,
 		GrowSize: growSize,
 	}
 	b := new(bytes.Buffer)
@@ -66,8 +67,8 @@ func growLvOnOtherServers(pvName string, growSize string) (error) {
 		req.SetBasicAuth("GLUSTER_API", Secret)
 
 		resp, err := client.Do(req)
-		if (err != nil || resp.StatusCode != http.StatusOK) {
-			if (resp != nil) {
+		if err != nil || resp.StatusCode != http.StatusOK {
+			if resp != nil {
 				log.Println("Remote did not respond with OK", resp.StatusCode)
 			} else {
 				log.Println("Connection to remote not possible", r, err.Error())
@@ -80,7 +81,7 @@ func growLvOnOtherServers(pvName string, growSize string) (error) {
 	return nil
 }
 
-func growLvLocally(pvName string, growSize string) (error) {
+func growLvLocally(pvName string, growSize string) error {
 	lvName := fmt.Sprintf("lv_%v", pvName)
 
 	commands := []string{

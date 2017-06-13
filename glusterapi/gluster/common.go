@@ -1,11 +1,11 @@
 package gluster
 
 import (
-	"os/exec"
-	"log"
-	"strings"
-	"net"
 	"errors"
+	"log"
+	"net"
+	"os/exec"
+	"strings"
 )
 
 var MaxGB int
@@ -19,7 +19,7 @@ var Secret string
 
 func getGlusterPeerServers() ([]string, error) {
 	out, err := exec.Command("bash", "-c", "gluster peer status | grep Hostname").Output()
-	if (err != nil) {
+	if err != nil {
 		log.Println("Error getting other gluster servers", err.Error())
 		return []string{}, errors.New(commandExecutionError)
 	}
@@ -27,7 +27,7 @@ func getGlusterPeerServers() ([]string, error) {
 	lines := strings.Split(string(out), "\n")
 	servers := []string{}
 	for _, l := range lines {
-		if (len(l) > 0) {
+		if len(l) > 0 {
 			servers = append(servers, strings.Replace(l, "Hostname: ", "", -1))
 		}
 	}
@@ -35,15 +35,15 @@ func getGlusterPeerServers() ([]string, error) {
 	return servers, nil
 }
 
-func getLocalServersIp() (string, error) {
+func getLocalServersIP() (string, error) {
 	ifaces, err := net.Interfaces()
-	if (err != nil) {
+	if err != nil {
 		log.Println("Error getting local servers ipv4 address", err.Error())
 		return "", errors.New(commandExecutionError)
 	}
 	for _, i := range ifaces {
 		addrs, err := i.Addrs()
-		if (err != nil) {
+		if err != nil {
 			log.Println("Error getting local servers ipv4 address", err.Error())
 			return "", errors.New(commandExecutionError)
 		}

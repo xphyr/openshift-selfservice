@@ -1,13 +1,14 @@
 package gluster
 
 import (
-	"github.com/oscp/openshift-selfservice/glusterapi/models"
+	"errors"
+	"fmt"
+	"log"
+	"os/exec"
 	"regexp"
 	"strconv"
-	"fmt"
-	"os/exec"
-	"log"
-	"errors"
+
+	"github.com/oscp/cloud-selfservice-portal/glusterapi/models"
 )
 
 func getVolumeUsage(pvName string) (*models.VolInfo, error) {
@@ -34,36 +35,36 @@ func parseOutput(stdOut string) (*models.VolInfo, error) {
 	nums := num.FindAllString(stdOut, -1)
 
 	size, err := strconv.Atoi(nums[0])
-	if (err != nil) {
+	if err != nil {
 		log.Println("Unable to parse size value of df output", stdOut)
 		return nil, errors.New(commandExecutionError)
 	}
 
 	used, err := strconv.Atoi(nums[1])
-	if (err != nil) {
+	if err != nil {
 		log.Println("Unable to parse used value of df output", stdOut)
 		return nil, errors.New(commandExecutionError)
 	}
 
 	return &models.VolInfo{
 		TotalKiloBytes: size,
-		UsedKiloBytes: used,
+		UsedKiloBytes:  used,
 	}, nil
 }
 
-func checkVolumeUsage(pvName string, threshold string) (error) {
+func checkVolumeUsage(pvName string, threshold string) error {
 	t, err := strconv.ParseFloat(threshold, 64)
-	if (err != nil) {
+	if err != nil {
 		return errors.New("Wrong threshold. Is not a valid integer")
 	}
 
 	volInfo, err := getVolumeUsage(pvName)
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 
 	usedPercentage := 100 / float64(volInfo.TotalKiloBytes) * float64(volInfo.UsedKiloBytes)
-	if (usedPercentage > t) {
+	if usedPercentage > t {
 		return fmt.Errorf("Error used %v is bigger than threshold: %v", usedPercentage, t)
 	}
 

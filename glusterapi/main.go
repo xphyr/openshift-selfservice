@@ -1,11 +1,12 @@
 package main
 
 import (
-	"log"
 	"flag"
-	"github.com/gin-gonic/gin"
+	"log"
 	"strconv"
-	"github.com/oscp/openshift-selfservice/glusterapi/gluster"
+
+	"github.com/gin-gonic/gin"
+	"github.com/oscp/cloud-selfservice-portal/glusterapi/gluster"
 )
 
 func init() {
@@ -19,7 +20,7 @@ func init() {
 	flag.StringVar(&gluster.Secret, "secret", "", "Specify the secret for communication on the /sec/ endpoints")
 	flag.Parse()
 
-	if (len(gluster.BasePath) == 0 || len(gluster.PoolName) == 0 || len(gluster.VgName) == 0 || len(gluster.Secret) == 0) {
+	if len(gluster.BasePath) == 0 || len(gluster.PoolName) == 0 || len(gluster.VgName) == 0 || len(gluster.Secret) == 0 {
 		log.Fatal("Must specify parameters 'poolName', 'basePath', 'vgName' and 'secret'")
 	}
 }
@@ -36,7 +37,7 @@ func main() {
 
 	// Secured endpoints with basic auth
 	sec := r.Group("/sec", gin.BasicAuth(gin.Accounts{
-		"GLUSTER_API":    gluster.Secret,
+		"GLUSTER_API": gluster.Secret,
 	}))
 	// /sec/volume 		= Create all the necessary things on all gluster servers for a new volume
 	// /sec/volume/grow 	= Grows an existing volume on all the gluster servers

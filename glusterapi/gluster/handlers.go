@@ -1,14 +1,15 @@
 package gluster
 
 import (
-	"net/http"
-	"github.com/oscp/openshift-selfservice/glusterapi/models"
-	"github.com/gin-gonic/gin"
 	"log"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/oscp/cloud-selfservice-portal/glusterapi/models"
 )
 
 const (
-	wrongApiUsageError = "Wrong API usage. Your payload did not match the endpoint"
+	wrongAPIUsageError = "Wrong API usage. Your payload did not match the endpoint"
 )
 
 func CreateVolumeHandler(c *gin.Context) {
@@ -30,7 +31,7 @@ func CreateVolumeHandler(c *gin.Context) {
 			})
 		}
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
+		c.JSON(http.StatusBadRequest, gin.H{"message": wrongAPIUsageError})
 	}
 }
 
@@ -53,7 +54,7 @@ func CreateLVHandler(c *gin.Context) {
 			})
 		}
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
+		c.JSON(http.StatusBadRequest, gin.H{"message": wrongAPIUsageError})
 	}
 }
 
@@ -76,7 +77,7 @@ func GrowVolumeHandler(c *gin.Context) {
 			})
 		}
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
+		c.JSON(http.StatusBadRequest, gin.H{"message": wrongAPIUsageError})
 	}
 }
 
@@ -99,19 +100,19 @@ func GrowLVHandler(c *gin.Context) {
 			})
 		}
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
+		c.JSON(http.StatusBadRequest, gin.H{"message": wrongAPIUsageError})
 	}
 }
 
 func VolumeInfoHandler(c *gin.Context) {
 	pvName := c.Param("pvname")
 	if len(pvName) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
+		c.JSON(http.StatusBadRequest, gin.H{"message": wrongAPIUsageError})
 		return
 	}
 
 	volInfo, err := getVolumeUsage(pvName)
-	if (err != nil) {
+	if err != nil {
 		log.Print("Error getting volume information", err.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -126,12 +127,12 @@ func CheckVolumeHandler(c *gin.Context) {
 	pvName := c.Param("pvname")
 	threshold := c.Query("threshold")
 	if len(pvName) == 0 || len(threshold) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"message": wrongApiUsageError})
+		c.JSON(http.StatusBadRequest, gin.H{"message": wrongAPIUsageError})
 		return
 	}
 
 	err := checkVolumeUsage(pvName, threshold)
-	if (err != nil) {
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
@@ -141,4 +142,3 @@ func CheckVolumeHandler(c *gin.Context) {
 		})
 	}
 }
-
