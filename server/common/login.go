@@ -1,28 +1,32 @@
 package common
 
 import (
-	"time"
-	"github.com/gin-gonic/gin"
-	"os"
 	"log"
+	"os"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
 	"net/http"
+
+	"github.com/jtblin/go-ldap-client"
 	"gopkg.in/appleboy/gin-jwt.v2"
 	jwt3 "gopkg.in/dgrijalva/jwt-go.v3"
-	"github.com/jtblin/go-ldap-client"
 )
 
-func GetAuthMiddleware() (*jwt.GinJWTMiddleware) {
+// GetAuthMiddleware returns a gin middleware for JWT with cookie based auth
+func GetAuthMiddleware() *jwt.GinJWTMiddleware {
 	key := os.Getenv("SESSION_KEY")
 
-	if (len(key) == 0) {
+	if len(key) == 0 {
 		log.Fatal("Env variable 'SESSION_KEY' must be specified")
 	}
 
 	return &jwt.GinJWTMiddleware{
-		Realm:      "CLOUD_SSP",
-		Key:        []byte(key),
-		Timeout:    time.Hour,
-		MaxRefresh: time.Hour,
+		Realm:         "CLOUD_SSP",
+		Key:           []byte(key),
+		Timeout:       time.Hour,
+		MaxRefresh:    time.Hour,
 		Authenticator: ldapAuthenticator,
 		Authorizator: func(userId string, c *gin.Context) bool {
 			return true
@@ -30,7 +34,7 @@ func GetAuthMiddleware() (*jwt.GinJWTMiddleware) {
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.Abort()
 			c.SetCookie("token", "", -1, "", "", false, true)
-			if (message == "Cookie token empty") {
+			if message == "Cookie token empty" {
 				message = ""
 			}
 			c.HTML(http.StatusOK, "login.html", gin.H{
@@ -38,11 +42,11 @@ func GetAuthMiddleware() (*jwt.GinJWTMiddleware) {
 			})
 		},
 		TokenLookup: "cookie:token",
-		TimeFunc: time.Now,
+		TimeFunc:    time.Now,
 	}
 }
 
-func ldapAuthenticator(userId string, password string, c *gin.Context) (string, bool) {
+func ldapAuthenticator(userID string, password string, c *gin.Context) (string, bool) {
 	ldapHost := os.Getenv("LDAP_URL")
 	ldapBind := os.Getenv("LDAP_BIND_DN")
 	ldapBindPw := os.Getenv("LDAP_BIND_CRED")
@@ -54,7 +58,7 @@ func ldapAuthenticator(userId string, password string, c *gin.Context) (string, 
 		Host:         ldapHost,
 		Port:         389,
 		UseSSL:       false,
-		SkipTLS: true,
+		SkipTLS:      true,
 		BindDN:       ldapBind,
 		BindPassword: ldapBindPw,
 		UserFilter:   ldapFilter,
@@ -62,16 +66,17 @@ func ldapAuthenticator(userId string, password string, c *gin.Context) (string, 
 	// It is the responsibility of the caller to close the connection
 	defer client.Close()
 
-	ok, _, err := client.Authenticate(userId, password)
+	ok, _, err := client.Authenticate(userID, password)
 	if err != nil {
-		log.Println("Error authenticating user %s: %+v", userId, err)
+		log.Printf("Error authenticating user %s: %+v", userID, err)
 	}
 	if !ok {
-		log.Println("Authenticating failed for user %s", userId)
+		log.Printf("Authenticating failed for user %s", userID)
 	}
-	return userId, ok
+	return userID, ok
 }
 
+// CookieLoginHandler handles a cookie based JWT token
 func CookieLoginHandler(mw *jwt.GinJWTMiddleware, c *gin.Context) {
 	// Initial middleware default setting.
 	mw.MiddlewareInit()
@@ -79,7 +84,7 @@ func CookieLoginHandler(mw *jwt.GinJWTMiddleware, c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 
-	if (len(username) == 0 || len(password) == 0) {
+	if len(username) == 0 || len(password) == 0 {
 		mw.Unauthorized(c, http.StatusBadRequest, "Benutzername / Passwort nicht angegeben")
 		return
 	}

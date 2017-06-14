@@ -3,9 +3,11 @@ package main
 import (
 	"net/http"
 
+	"log"
+
 	"github.com/gin-gonic/gin"
-	"github.com/oscp/openshift-selfservice/server/common"
-	"github.com/oscp/openshift-selfservice/server/openshift"
+	"github.com/oscp/cloud-selfservice-portal/server/common"
+	"github.com/oscp/cloud-selfservice-portal/server/openshift"
 )
 
 func main() {
@@ -16,7 +18,7 @@ func main() {
 	// Public routes
 	authMiddleware := common.GetAuthMiddleware()
 	router.GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusPermanentRedirect, "/auth/")
+		c.Redirect(http.StatusTemporaryRedirect, "/auth/")
 	})
 	router.GET("/login", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login.html", gin.H{})
@@ -46,8 +48,6 @@ func main() {
 		// ...
 	}
 
+	log.Println("Cloud SSP is running")
 	router.Run()
 }
-
-
-
