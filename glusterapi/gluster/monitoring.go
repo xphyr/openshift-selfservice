@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/oscp/cloud-selfservice-portal/glusterapi/models"
 )
@@ -16,6 +17,9 @@ func getVolumeUsage(pvName string) (*models.VolInfo, error) {
 
 	out, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
+		if strings.Contains(err.Error(), "exit status 1") {
+			return nil, fmt.Errorf("PV %v does not exist", pvName)
+		}
 		msg := "Could not parse usage size: " + err.Error()
 		log.Println(msg)
 		return nil, errors.New(msg)
