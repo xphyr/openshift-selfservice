@@ -6,7 +6,7 @@ before_install:
   - go get github.com/mitchellh/gox
 
 install:
-- go get github.com/gin-gonic
+- go get github.com/gin-gonic/gin
 
 script:
   - gox -osarch="linux/amd64" -output "./dist/{{.Dir}}" github.com/oscp/cloud-selfservice-portal/glusterapi
