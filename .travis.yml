@@ -3,23 +3,21 @@ go:
 - 1.8.x
 
 before_install:
-  - go get github.com/mitchellh/gox
+- go get github.com/mitchellh/gox
 
 install:
 - go get github.com/gin-gonic/gin
 
 script:
-  - gox -osarch="linux/amd64" -output "./dist/{{.Dir}}" github.com/oscp/cloud-selfservice-portal/glusterapi
-  - cp ./install/* ./dist/
-  - cd ./dist/
-  - tar -zcvf gluster-api.tar.gz glusterapi glusterapi.service
+- gox -osarch="linux/amd64" -output "./dist/{{.Dir}}" github.com/oscp/cloud-selfservice-portal/glusterapi
+- cp ./install/* ./dist/
+- cd ./dist/
+- tar -zcvf gluster-api.tar.gz glusterapi glusterapi.service
 
 deploy:
   provider: releases
   api_key:
-    secure: fk1WqHNOZm5cCXRQZ1wleFxP7lORnuZ5xqJLjyJmaw+APX25c3XL1ASiv004Ied7fNTqCzjLJMfntuDK4y/zkyE26p6p/7GvRYq+j6ejSA3w60UqzYPckA5kp21T2Kb2eED2LXJ1TaTlnJxCP+vXpHQUYeqZ45i5Dimq1TlIUOlBmBKQCCOucNB52RA62+919W1fB0hjKH1X9YSpO/uwf/BCbqWKzGLNz6zHE9+wIzRgAEpTgccEIkXOoxoNWGWv9Gbbe8t206qND+mscogiK3bDhJjoAW4SaQe2ZHf0H9cNN3f0S5FaAMZLEfVz6d7rDAsyTnSgEyPCRP0i9HjQMRwkPiXvtcZBfKS0C6rpbQVw+vhWL2AvPXUhHKVS2+g82+qQ+eOUqA3MOPPAMcMesNWuNSzE6sb6EZ6Z9bzL+FFAq1nZZkj/zGlsbhFxiCOVXWpUuHNnMJFZdcpnQrwLgQfcXbMBuiQkS/6oKGiPeiCb2FgfOAqGdDjBW4vyQeja36QNMA4qN2rh6agunKqTyZTEoJFH6FLA5yT2hAJQM4WiTU4WPP4yiz6lsQShhkF8IdQtv+6ST8Y+bJJttI22LLl2ka4f+JnPmMUsMbBOu2KhTj8v2eTPQNrvsf+5VckRgNDQM8K11FUyvGhX/aSFWGGWl7VyD7HjgGMEaR91UhE=
-  file:
-  - "gluster-api.tar.gz"
-  skip_cleanup: true
+    secure: aUPqkwrlK4xps/e9NipGHQ/9UxuHNS2ygXiDV6f3+H4als67/yzEJ54CIKmY2B7WseA86HHtKh56Eh4W56a+uM/DJAxsPfS8c8igpXy8YVe2g4LwZ3u1HGrsfBcf5+X0X+o8K71I2OFiy7gkZGXKAf45yQLATn+O9dwJrxy119JkCqGPrg6LJ8AEi7btTAARlyRLgYoudBmuMjUifO+YDE4MMKBTPx1g84wCL5z+Eu6JFzUEsiE/aNvfHr7hTjCBdhZW9UseOcYAR8XJ5zksRj1rHP6rbQ2vkm7fmlSAnLypdD7my4jnSgJ4wzj9Qg4OrlNVW735Y5FuT9RmOWKzrk1X7fNavdNjyhmZZO86bb02iEzS3igCKAqX7+0KJdj7ZUTYLCGoFoW6HU6sotQtWPOVPcXjt+Ozpo4F4iKiaK5TI3aS8TRXZAdwHE27ZBbly6cwtUSQ5xknB9xVlLhuwghqvesELT6ALJfwe6h0Ou4g6vn4lJLwu4PxmL6vTUZ8CGLGVu+8rfBHcZp8SROzzp/F9SSgjkdUY0p29eHuHi1TfA5dSJooZ4Lul/FhkDe4tp7waqP3b7VA33xLHkY9alE8An6xh/x0gCA91vwgm0Ib39l86aNmBdAJlusxkTWoB/B1rpu45MXsw567zX/oX1sArr9e3LNxzUujr+v4yRY=
+  file: gluster-api.tar.gz
   on:
     tags: true
