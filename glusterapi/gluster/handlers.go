@@ -17,17 +17,17 @@ func CreateVolumeHandler(c *gin.Context) {
 	if c.BindJSON(&json) == nil {
 		log.Printf("Got new request for a volume. project: %v size: %v", json.Project, json.Size)
 
-		if err := createVolume(json.Project, json.Size); err != nil {
+		if pvName, err := createVolume(json.Project, json.Size); err != nil {
 			log.Print("Volume creation failed", err.Error())
 
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": err.Error(),
 			})
 		} else {
-			log.Print("Volume was created")
+			log.Print("Volume was created. Name of PV:", pvName)
 
 			c.JSON(http.StatusOK, gin.H{
-				"message": "Volume created",
+				"message": pvName,
 			})
 		}
 	} else {
