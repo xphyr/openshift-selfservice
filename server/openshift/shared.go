@@ -61,7 +61,7 @@ func RegisterRoutes(r *gin.RouterGroup) {
 
 	// NewVolume
 	r.GET("/openshift/newvolume", func(c *gin.Context) {
-		c.HTML(http.StatusOK, newVoluemURL, gin.H{})
+		c.HTML(http.StatusOK, newVoluemeURL, gin.H{})
 	})
 	r.POST("/openshift/newvolume", newVolumeHandler)
 }
@@ -160,6 +160,26 @@ func getOseHTTPClient(method string, endURL string, body io.Reader) (*http.Clien
 	}
 
 	req.Header.Add("Authorization", "Bearer "+token)
+
+	return client, req
+}
+
+func getGlusterHTTPClient(url string, body io.Reader) (*http.Client, *http.Request) {
+	glusterURL := os.Getenv("GLUSTER_API_URL")
+	glusterSecret := os.Getenv("GLUSTER_SECRET")
+
+	if len(glusterURL) == 0 || len(glusterSecret) == 0 {
+		log.Fatal("Env variables 'GLUSTER_API_URL' and 'GLUSTER_SECRET' must be specified")
+	}
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", fmt.Sprintf("%v/%v", glusterURL, url), body)
+
+	if common.DebugMode() {
+		log.Printf("Calling ", req.URL.String())
+	}
+
+	req.SetBasicAuth("GLUSTER_API", glusterSecret)
 
 	return client, req
 }

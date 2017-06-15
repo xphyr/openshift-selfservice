@@ -97,11 +97,7 @@ MAX\_CPU|How many CPU can a user assign to his project|30
 MAX\_MEMORY|How many GB memory can a user assign to his project|50
 
 ## The GlusterFS api
-TODO: Servicefile, for now use the command:
-
-```bash
-./glusterapi -poolName=lv_slow_pool -vgName=vg_slow -basePath=/gluster/slow -secret=UGGA -port=80
-```
+Use/see the service unit file in ./install/
 
 ## Monitoring endpoints
 The gluster api has two public endpoints for monitoring purposes. Call them this way:

@@ -116,7 +116,7 @@ func validateSizeInput(size string) error {
 }
 
 func getExistingLvForProject(project string) (int, error) {
-	out, err := exec.Command("bash", "-c", "lvs").Output()
+	out, err := exec.Command("bash", "-c", "lvs -o lv_name").Output()
 	if err != nil {
 		log.Printf("Could not count existing lvs for a project: %v. Error: %v", project, err.Error())
 		return -1, errors.New(commandExecutionError)
