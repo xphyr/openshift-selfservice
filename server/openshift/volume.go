@@ -156,7 +156,7 @@ func createOpenShiftPVC(project string, size string, pvcName string, mode string
 	p.ArrayAppend(mode, "spec", "accessModes")
 
 	client, req := getOseHTTPClient("POST",
-		"api/v1/namespaces/" + project + "/persistentvolumeclaims",
+		"api/v1/namespaces/"+project+"/persistentvolumeclaims",
 		bytes.NewReader(p.Bytes()))
 
 	resp, err := client.Do(req)
