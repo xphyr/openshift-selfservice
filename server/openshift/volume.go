@@ -65,7 +65,11 @@ func createNewVolume(project string, username string, size string, pvcName strin
 	//}
 
 	pvName := "test_pv5"
-	if err := createOpenShiftPVandPVC(project, size, pvName, pvcName, mode, username); err != nil {
+	if err := createOpenShiftPV(size, pvName, mode, username); err != nil {
+		return err
+	}
+
+	if err := createOpenShiftPVC(project, size, pvcName, mode, username); err != nil {
 		return err
 	}
 
@@ -112,7 +116,7 @@ func createGlusterVolume(project string, size string, username string) (string, 
 	}
 }
 
-func createOpenShiftPVandPVC(project string, size string, pvName string, pvcName string, mode string, username string) error {
+func createOpenShiftPV(size string, pvName string, mode string, username string) error {
 	p := newObjectRequest("PersistentVolume", strings.Replace(pvName, "_", "-", -1))
 
 	p.SetP(size, "spec.capacity.storage")
@@ -123,8 +127,6 @@ func createOpenShiftPVandPVC(project string, size string, pvName string, pvcName
 
 	p.ArrayP("spec.accessModes")
 	p.ArrayAppend(mode, "spec", "accessModes")
-
-	log.Println(p.String())
 
 	client, req := getOseHTTPClient("POST",
 		"api/v1/persistentvolumes",
@@ -137,14 +139,38 @@ func createOpenShiftPVandPVC(project string, size string, pvName string, pvcName
 
 	if resp.StatusCode == http.StatusCreated {
 		log.Printf("Created the pv %v because of the request of %v", pvName, username)
-
-		// Create pvc now
-
 		return nil
 	}
 
 	errMsg, _ := ioutil.ReadAll(resp.Body)
 	log.Println("Error creating new PV:", err, resp.StatusCode, string(errMsg))
+
+	return errors.New(genericAPIError)
+}
+
+func createOpenShiftPVC(project string, size string, pvcName string, mode string, username string) error {
+	p := newObjectRequest("PersistentVolumeClaim", strings.Replace(pvcName, "_", "-", -1))
+
+	p.SetP(size, "spec.resources.requests.storage")
+	p.ArrayP("spec.accessModes")
+	p.ArrayAppend(mode, "spec", "accessModes")
+
+	client, req := getOseHTTPClient("POST",
+		"api/v1/namespaces/" + project + "/persistentvolumeclaims",
+		bytes.NewReader(p.Bytes()))
+
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+
+	if resp.StatusCode == http.StatusCreated {
+		log.Printf("Created the pvc %v because of the request of %v", pvcName, username)
+		return nil
+	}
+
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error creating new PVC:", err, resp.StatusCode, string(errMsg))
 
 	return errors.New(genericAPIError)
 }
