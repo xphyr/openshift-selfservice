@@ -43,9 +43,6 @@ func main() {
 
 		// Openshift routes
 		openshift.RegisterRoutes(auth)
-
-		// Thirdparty routes
-		// ...
 	}
 
 	log.Println("Cloud SSP is running")
