@@ -50,6 +50,28 @@ func newVolumeHandler(c *gin.Context) {
 	}
 }
 
+func fixVolumeHandler(c *gin.Context) {
+	project := c.PostForm("project")
+	username := common.GetUserName(c)
+
+	if err := validateFixVolume(project, username); err != nil {
+		c.HTML(http.StatusOK, fixVolumeURL, gin.H{
+			"Error": err.Error(),
+		})
+		return
+	}
+
+	if err := recreateGlusterObjects(project, username); err != nil {
+		c.HTML(http.StatusOK, fixVolumeURL, gin.H{
+			"Error": err.Error(),
+		})
+	} else {
+		c.HTML(http.StatusOK, fixVolumeURL, gin.H{
+			"Success": "Die Gluster-Objekte wurden in deinem Projekt erzeugt.",
+		})
+	}
+}
+
 func validateNewVolume(project string, size string, pvcName string, mode string, username string) error {
 	// Required fields
 	if len(project) == 0 || len(pvcName) == 0 || len(size) == 0 || len(mode) == 0 {
@@ -82,8 +104,21 @@ func validateNewVolume(project string, size string, pvcName string, mode string,
 		}
 	}
 
-	if (!sizeOk) {
+	if !sizeOk {
 		return fmt.Errorf(wrongSizeError, maxMB, maxGB)
+	}
+
+	// Permissions on project
+	if err := checkAdminPermissions(username, project); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateFixVolume(project string, username string) error {
+	if len(project) == 0 {
+		return errors.New("Projekt muss angegeben werden")
 	}
 
 	// Permissions on project
@@ -101,7 +136,7 @@ func getMaxSizes() (int, int) {
 	maxMBInt, errMB := strconv.Atoi(maxMB)
 	maxGBInt, errGB := strconv.Atoi(maxGB)
 
-	if (errMB != nil || errGB != nil || maxMBInt <= 0 || maxGBInt <= 0) {
+	if errMB != nil || errGB != nil || maxMBInt <= 0 || maxGBInt <= 0 {
 		log.Fatal("Env variables 'MAX_MB' and 'MAX_GB' must be specified and a valid integer")
 	}
 	return maxMBInt, maxGBInt
@@ -155,14 +190,14 @@ func createGlusterVolume(project string, size string, username string) (string, 
 	if resp.StatusCode == http.StatusOK {
 		log.Printf("%v created a gluster volume. Project: %v, size: %v", username, project, size)
 
-		json, err := gabs.ParseJSONBuffer(resp.Body)
+		respJson, err := gabs.ParseJSONBuffer(resp.Body)
 		if err != nil {
-			log.Println("Error parsing json from gluster-api response", err.Error())
+			log.Println("Error parsing respJson from gluster-api response", err.Error())
 			return "", errors.New(genericAPIError)
 		}
 
 		// Add gl_ to pvName because of conflicting PVs on other storage technology
-		return fmt.Sprintf("gl_%v", json.Path("message").Data().(string)), nil
+		return fmt.Sprintf("gl_%v", respJson.Path("message").Data().(string)), nil
 	}
 
 	errMsg, _ := ioutil.ReadAll(resp.Body)
@@ -228,6 +263,18 @@ func createOpenShiftPVC(project string, size string, pvcName string, mode string
 	log.Println("Error creating new PVC:", err, resp.StatusCode, string(errMsg))
 
 	return errors.New(genericAPIError)
+}
+
+func recreateGlusterObjects(project string, username string) error {
+	if err := createOpenShiftGlusterService(project, username); err != nil {
+		return err
+	}
+
+	if err := createOpenShiftGlusterEndpoint(project, username); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func createOpenShiftGlusterService(project string, username string) error {
