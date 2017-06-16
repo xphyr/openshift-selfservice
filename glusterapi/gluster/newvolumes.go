@@ -19,18 +19,18 @@ const (
 	commandExecutionError = "Error running command, see logs for details"
 )
 
-func createVolume(project string, size string) error {
+func createVolume(project string, size string) (string, error) {
 	if len(size) == 0 || len(project) == 0 {
-		return errors.New("Not all input values provided")
+		return "", errors.New("Not all input values provided")
 	}
 
 	if err := validateSizeInput(size); err != nil {
-		return err
+		return "", err
 	}
 
 	pvNumber, err := getExistingLvForProject(project)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	mountPoint := fmt.Sprintf("%v/%v/pv%v", BasePath, project, pvNumber)
@@ -38,15 +38,15 @@ func createVolume(project string, size string) error {
 
 	// Create lvs on pool on all gluster servers
 	if err := createLvOnAllServers(size, mountPoint, lvName); err != nil {
-		return err
+		return "", err
 	}
 
 	// Create gluster volume
 	if err := createGlusterVolume(project, pvNumber, mountPoint); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return fmt.Sprintf("%v_pv%v", project, pvNumber), nil
 }
 
 func createLvOnPool(size string, mountPoint string, lvName string) error {
@@ -116,7 +116,7 @@ func validateSizeInput(size string) error {
 }
 
 func getExistingLvForProject(project string) (int, error) {
-	out, err := exec.Command("bash", "-c", "lvs").Output()
+	out, err := exec.Command("bash", "-c", "lvs -o lv_name").Output()
 	if err != nil {
 		log.Printf("Could not count existing lvs for a project: %v. Error: %v", project, err.Error())
 		return -1, errors.New(commandExecutionError)

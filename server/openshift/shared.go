@@ -21,6 +21,9 @@ const (
 	newTestProjectURL    = "newtestproject.html"
 	updateBillingURL     = "updatebilling.html"
 	newServiceAccountURL = "newserviceaccount.html"
+	newVolumeURL         = "newvolume.html"
+	fixVolumeURL         = "fixvolume.html"
+	growVolumeURL        = "growvolume.html"
 	genericAPIError      = "Fehler beim Aufruf der OpenShift-API"
 )
 
@@ -57,6 +60,24 @@ func RegisterRoutes(r *gin.RouterGroup) {
 		c.HTML(http.StatusOK, newServiceAccountURL, gin.H{})
 	})
 	r.POST("/openshift/newserviceaccount", newServiceAccountHandler)
+
+	// NewVolume
+	r.GET("/openshift/newvolume", func(c *gin.Context) {
+		c.HTML(http.StatusOK, newVolumeURL, gin.H{})
+	})
+	r.POST("/openshift/newvolume", newVolumeHandler)
+
+	// FixVolume
+	r.GET("/openshift/fixvolume", func(c *gin.Context) {
+		c.HTML(http.StatusOK, fixVolumeURL, gin.H{})
+	})
+	r.POST("/openshift/fixvolume", fixVolumeHandler)
+
+	// growVolume
+	r.GET("/openshift/growvolume", func(c *gin.Context) {
+		c.HTML(http.StatusOK, growVolumeURL, gin.H{})
+	})
+	r.POST("/openshift/growvolume", growVolumeHandler)
 }
 
 func checkAdminPermissions(username string, project string) error {
@@ -153,6 +174,26 @@ func getOseHTTPClient(method string, endURL string, body io.Reader) (*http.Clien
 	}
 
 	req.Header.Add("Authorization", "Bearer "+token)
+
+	return client, req
+}
+
+func getGlusterHTTPClient(url string, body io.Reader) (*http.Client, *http.Request) {
+	glusterURL := os.Getenv("GLUSTER_API_URL")
+	glusterSecret := os.Getenv("GLUSTER_SECRET")
+
+	if len(glusterURL) == 0 || len(glusterSecret) == 0 {
+		log.Fatal("Env variables 'GLUSTER_API_URL' and 'GLUSTER_SECRET' must be specified")
+	}
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", fmt.Sprintf("%v/%v", glusterURL, url), body)
+
+	if common.DebugMode() {
+		log.Printf("Calling %v", req.URL.String())
+	}
+
+	req.SetBasicAuth("GLUSTER_API", glusterSecret)
 
 	return client, req
 }

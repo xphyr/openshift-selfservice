@@ -1,0 +1,33 @@
+{{ template "header.html" . }}
+
+<div class="jumbotron">
+    <h1><span class="fa fa-hdd-o"></span> Persistent Volume anlegen</h1>
+    <p>Hier kannst du ein Persistent Volume für OpenShift auf GlusterFS erstellen</p>
+</div>
+
+<form method="post" onsubmit="spinner();">
+    <div class="form-group">
+        <label for="project">Projektname</label>
+        <input type="text" class="form-control" required id="project" name="project" placeholder="projektname-dev">
+    </div>
+    <div class="form-group">
+        <label for="size">Grösse</label>
+        <p><em>z.B. 100M oder 5G</em></p>
+        <input type="text" class="form-control" required id="size" name="size" placeholder="100M">
+    </div>
+    <div class="form-group">
+        <label for="pvcname">Name des Persistent Volume Claims</label>
+        <input type="text" class="form-control" required id="pvcname" name="pvcname">
+    </div>
+    <label>Verwendungsmodus</label>
+    <p><em>Siehe <a href="https://docs.openshift.com/container-platform/3.3/architecture/additional_concepts/storage.html#pv-access-modes">Dokumentation</a></em></p>
+    <input type="radio" name="mode" value="ReadWriteOnce" checked> ReadWriteOnce (RWO)<br>
+    <input type="radio" name="mode" value="ReadWriteMany"> ReadWriteMany (RWX)<br><br>
+
+    <button type="submit" id="submitBtn" class="btn btn-primary">Persistent Volume erstellen</button>
+
+    {{ template "spinner.html" . }}
+
+</form>
+
+{{ template "footer.html" . }}

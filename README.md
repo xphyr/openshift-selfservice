@@ -64,7 +64,15 @@ oc edit clusterPolicy default
     - apiGroups: null
       attributeRestrictions: null
       resources:
-      - serviceaccounts
+      - persistentvolumes
+      - persistentvolumeclaims
+      verbs:
+      - create
+    - apiGroups: null
+      attributeRestrictions: null
+      resources:
+      - services
+      - endpoints
       verbs:
       - create
     - apiGroups: null
@@ -95,13 +103,12 @@ OPENSHIFT\_TOKEN|The token from the service-account|
 GIN\_MODE|Mode of the Webframework|debug/release
 MAX\_CPU|How many CPU can a user assign to his project|30
 MAX\_MEMORY|How many GB memory can a user assign to his project|50
+GLUSTER\_API\_URL|The URL of your Gluster-API|http://glusterserver01:80
+GLUSTER\_SECRET|The basic auth password you configured on the gluster api|secret
+GLUSTER\_IPS|IP addresses of the gluster endpoints|192.168.1.1,192.168.1.2
 
 ## The GlusterFS api
-TODO: Servicefile, for now use the command:
-
-```bash
-./glusterapi -poolName=lv_slow_pool -vgName=vg_slow -basePath=/gluster/slow -secret=UGGA -port=80
-```
+Use/see the service unit file in ./install/
 
 ## Monitoring endpoints
 The gluster api has two public endpoints for monitoring purposes. Call them this way:

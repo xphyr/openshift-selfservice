@@ -28,11 +28,11 @@ func newProjectHandler(c *gin.Context) {
 
 	if err := createNewProject(project, username, billing, megaid); err != nil {
 		c.HTML(http.StatusOK, newProjectURL, gin.H{
-			"Success": "Das Projekt wurde erstellt",
+			"Error": err.Error(),
 		})
 	} else {
 		c.HTML(http.StatusOK, newProjectURL, gin.H{
-			"Error": err.Error(),
+			"Success": "Das Projekt wurde erstellt",
 		})
 	}
 }
@@ -130,7 +130,7 @@ func createNewProject(project string, username string, billing string, megaid st
 	}
 
 	if resp.StatusCode == http.StatusCreated {
-		log.Print(username + " created a new project: " + project)
+		log.Printf("%v created a new project: %v", username, project)
 
 		if err := changeProjectPermission(project, username); err != nil {
 			return err

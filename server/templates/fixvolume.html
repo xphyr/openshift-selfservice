@@ -1,0 +1,16 @@
+{{ template "header.html" . }}
+
+<div class="jumbotron">
+    <h1><span class="fa fa-chain-broken"></span> Gluster Konfiguration erzeugen</h1>
+    <p>Diese Funktion erstellt die Gluster Objekte (Service & Endpoints) in deinem Projekt</p>
+</div>
+
+<form method="post">
+    <div class="form-group">
+        <label for="project">Projektname</label>
+        <input type="text" class="form-control" required id="project" name="project" placeholder="projektname-dev">
+    </div>
+    <button type="submit" class="btn btn-primary">Gluster Objekte erstellen</button>
+</form>
+
+{{ template "footer.html" . }}

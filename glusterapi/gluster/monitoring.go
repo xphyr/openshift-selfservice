@@ -13,6 +13,9 @@ import (
 )
 
 func getVolumeUsage(pvName string) (*models.VolInfo, error) {
+	// Remove gl_ if necessary
+	pvName = strings.Replace(pvName, "gl_", "", -1)
+
 	cmd := fmt.Sprintf("df --output=size,used,source | grep %v", pvName)
 
 	out, err := exec.Command("bash", "-c", cmd).Output()

@@ -1,16 +1,16 @@
 package gluster
 
 import (
-	"os/exec"
-	"log"
 	"errors"
+	"log"
+	"os/exec"
 )
 
-func executeCommandsLocally(commands []string) (error) {
+func executeCommandsLocally(commands []string) error {
 	log.Println("Got new commands to execute:")
 	for _, c := range commands {
 		out, err := exec.Command("bash", "-c", c).Output()
-		if (err != nil) {
+		if err != nil {
 			log.Println("Error executing command: ", c, err.Error(), string(out))
 			return errors.New(commandExecutionError)
 		}
@@ -19,4 +19,3 @@ func executeCommandsLocally(commands []string) (error) {
 
 	return nil
 }
-
