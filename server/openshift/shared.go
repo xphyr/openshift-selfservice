@@ -190,7 +190,7 @@ func getGlusterHTTPClient(url string, body io.Reader) (*http.Client, *http.Reque
 	req, _ := http.NewRequest("POST", fmt.Sprintf("%v/%v", glusterURL, url), body)
 
 	if common.DebugMode() {
-		log.Printf("Calling ", req.URL.String())
+		log.Printf("Calling %v", req.URL.String())
 	}
 
 	req.SetBasicAuth("GLUSTER_API", glusterSecret)
