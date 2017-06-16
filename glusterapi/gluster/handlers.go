@@ -13,11 +13,6 @@ const (
 )
 
 func CreateVolumeHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message": "test_pv5",
-	})
-	return
-
 	var json models.CreateVolumeCommand
 	if c.BindJSON(&json) == nil {
 		log.Printf("Got new request for a volume. project: %v size: %v", json.Project, json.Size)

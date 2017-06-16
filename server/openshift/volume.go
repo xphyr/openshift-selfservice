@@ -12,11 +12,17 @@ import (
 
 	"encoding/json"
 
+	"os"
+	"strconv"
+
 	"github.com/Jeffail/gabs"
 	"github.com/gin-gonic/gin"
 	"github.com/oscp/cloud-selfservice-portal/glusterapi/models"
 	"github.com/oscp/cloud-selfservice-portal/server/common"
-	"os"
+)
+
+const (
+	wrongSizeError = "Ungültige Grösse. Format muss Zahl gefolgt von M/G sein (z.B. 100M). Maximale erlaubte Grössen sind: M: %v, G: %v"
 )
 
 func newVolumeHandler(c *gin.Context) {
@@ -26,36 +32,61 @@ func newVolumeHandler(c *gin.Context) {
 	mode := c.PostForm("mode")
 	username := common.GetUserName(c)
 
-	project = "test"
-	pvcName = "meinpvc"
-	size = "100M"
-
 	if err := validateNewVolume(project, size, pvcName, mode, username); err != nil {
-		c.HTML(http.StatusOK, newVoluemeURL, gin.H{
+		c.HTML(http.StatusOK, newVolumeURL, gin.H{
 			"Error": err.Error(),
 		})
 		return
 	}
 
 	if err := createNewVolume(project, username, size, pvcName, mode); err != nil {
-		c.HTML(http.StatusOK, newVoluemeURL, gin.H{
+		c.HTML(http.StatusOK, newVolumeURL, gin.H{
 			"Error": err.Error(),
 		})
 	} else {
-		c.HTML(http.StatusOK, newVoluemeURL, gin.H{
+		c.HTML(http.StatusOK, newVolumeURL, gin.H{
 			"Success": "Das Volume wurde erstellt. Deinem Projekt wurde das PVC, und der Gluster Service & Endpunkte hinzugefügt.",
 		})
 	}
 }
 
 func validateNewVolume(project string, size string, pvcName string, mode string, username string) error {
+	// Required fields
 	if len(project) == 0 || len(pvcName) == 0 || len(size) == 0 || len(mode) == 0 {
 		return errors.New("Es müssen alle Felder ausgefüllt werden")
 	}
 
-	// Todo validate me better
+	// Size limits
+	maxMB, maxGB := getMaxSizes()
+	sizeOk := false
+	if strings.HasSuffix(size, "M") {
+		sizeInt, err := strconv.Atoi(strings.Replace(size, "M", "", 1))
+		if err != nil {
+			return fmt.Errorf(wrongSizeError, maxMB, maxGB)
+		}
 
-	// Validate permissions
+		if sizeInt <= maxMB {
+			sizeOk = true
+		} else {
+			return errors.New("Deine Angaben sind zu gross für 'M'. Bitte gib die Grösse als Ganzzahl in 'G' an")
+		}
+	}
+	if strings.HasSuffix(size, "G") {
+		sizeInt, err := strconv.Atoi(strings.Replace(size, "G", "", 1))
+		if err != nil {
+			return fmt.Errorf(wrongSizeError, maxMB, maxGB)
+		}
+
+		if sizeInt <= maxGB {
+			sizeOk = true
+		}
+	}
+
+	if (!sizeOk) {
+		return fmt.Errorf(wrongSizeError, maxMB, maxGB)
+	}
+
+	// Permissions on project
 	if err := checkAdminPermissions(username, project); err != nil {
 		return err
 	}
@@ -63,9 +94,22 @@ func validateNewVolume(project string, size string, pvcName string, mode string,
 	return nil
 }
 
+func getMaxSizes() (int, int) {
+	maxMB := os.Getenv("MAX_MB")
+	maxGB := os.Getenv("MAX_GB")
+
+	maxMBInt, errMB := strconv.Atoi(maxMB)
+	maxGBInt, errGB := strconv.Atoi(maxGB)
+
+	if (errMB != nil || errGB != nil || maxMBInt <= 0 || maxGBInt <= 0) {
+		log.Fatal("Env variables 'MAX_MB' and 'MAX_GB' must be specified and a valid integer")
+	}
+	return maxMBInt, maxGBInt
+}
+
 func createNewVolume(project string, username string, size string, pvcName string, mode string) error {
-	pvName, err := createGlusterVolume(project, size, username);
-	if (err != nil) {
+	pvName, err := createGlusterVolume(project, size, username)
+	if err != nil {
 		return err
 	}
 
@@ -117,7 +161,8 @@ func createGlusterVolume(project string, size string, username string) (string, 
 			return "", errors.New(genericAPIError)
 		}
 
-		return json.Path("message").Data().(string), nil
+		// Add gl_ to pvName because of conflicting PVs on other storage technology
+		return fmt.Sprintf("gl_%v", json.Path("message").Data().(string)), nil
 	}
 
 	errMsg, _ := ioutil.ReadAll(resp.Body)
@@ -131,7 +176,7 @@ func createOpenShiftPV(size string, pvName string, mode string, username string)
 
 	p.SetP(size, "spec.capacity.storage")
 	p.SetP("glusterfs-cluster", "spec.glusterfs.endpoints")
-	p.SetP(fmt.Sprintf("vol_%v", pvName), "spec.glusterfs.path")
+	p.SetP(strings.Replace(pvName, "gl_", "vol_", 1), "spec.glusterfs.path")
 	p.SetP(false, "spec.glusterfs.readOnly")
 	p.SetP("Retain", "spec.persistentVolumeReclaimPolicy")
 
@@ -208,7 +253,7 @@ func createOpenShiftGlusterService(project string, username string) error {
 		return nil
 	}
 
-	if (resp.StatusCode == http.StatusConflict) {
+	if resp.StatusCode == http.StatusConflict {
 		log.Println("Gluster service already existed, skipping")
 		return nil
 	}
@@ -221,7 +266,7 @@ func createOpenShiftGlusterService(project string, username string) error {
 
 func createOpenShiftGlusterEndpoint(project string, username string) error {
 	p, err := getGlusterEndpointsContainer()
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 
@@ -239,7 +284,7 @@ func createOpenShiftGlusterEndpoint(project string, username string) error {
 		return nil
 	}
 
-	if (resp.StatusCode == http.StatusConflict) {
+	if resp.StatusCode == http.StatusConflict {
 		log.Println("Gluster endpoints already existed, skipping")
 		return nil
 	}
@@ -256,7 +301,7 @@ func getGlusterEndpointsContainer() (*gabs.Container, error) {
 
 	// Add gluster endpoints
 	glusterIPs := os.Getenv("GLUSTER_IPS")
-	if (len(glusterIPs) == 0) {
+	if len(glusterIPs) == 0 {
 		log.Println("Wrong configuration. Missing env variable 'GLUSTER_IPS'")
 		return nil, errors.New(genericAPIError)
 	}

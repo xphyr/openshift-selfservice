@@ -21,7 +21,7 @@ const (
 	newTestProjectURL    = "newtestproject.html"
 	updateBillingURL     = "updatebilling.html"
 	newServiceAccountURL = "newserviceaccount.html"
-	newVoluemeURL        = "newvolume.html"
+	newVolumeURL         = "newvolume.html"
 	genericAPIError      = "Fehler beim Aufruf der OpenShift-API"
 )
 
@@ -61,7 +61,7 @@ func RegisterRoutes(r *gin.RouterGroup) {
 
 	// NewVolume
 	r.GET("/openshift/newvolume", func(c *gin.Context) {
-		c.HTML(http.StatusOK, newVoluemeURL, gin.H{})
+		c.HTML(http.StatusOK, newVolumeURL, gin.H{})
 	})
 	r.POST("/openshift/newvolume", newVolumeHandler)
 }
