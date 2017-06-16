@@ -71,6 +71,13 @@ oc edit clusterPolicy default
     - apiGroups: null
       attributeRestrictions: null
       resources:
+      - services
+      - endpoints
+      verbs:
+      - create
+    - apiGroups: null
+      attributeRestrictions: null
+      resources:
       - projectrequests
       verbs:
       - create
@@ -98,6 +105,7 @@ MAX\_CPU|How many CPU can a user assign to his project|30
 MAX\_MEMORY|How many GB memory can a user assign to his project|50
 GLUSTER\_API\_URL|The URL of your Gluster-API|http://glusterserver01:80
 GLUSTER\_SECRET|The basic auth password you configured on the gluster api|secret
+GLUSTER\_IPS|IP addresses of the gluster endpoints|192.168.1.1,192.168.1.2
 
 ## The GlusterFS api
 Use/see the service unit file in ./install/

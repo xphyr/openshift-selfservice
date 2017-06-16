@@ -5,16 +5,18 @@ import (
 	"net/http"
 
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
 
+	"encoding/json"
+
 	"github.com/Jeffail/gabs"
 	"github.com/gin-gonic/gin"
 	"github.com/oscp/cloud-selfservice-portal/glusterapi/models"
 	"github.com/oscp/cloud-selfservice-portal/server/common"
+	"os"
 )
 
 func newVolumeHandler(c *gin.Context) {
@@ -51,6 +53,8 @@ func validateNewVolume(project string, size string, pvcName string, mode string,
 		return errors.New("Es müssen alle Felder ausgefüllt werden")
 	}
 
+	// Todo validate me better
+
 	// Validate permissions
 	if err := checkAdminPermissions(username, project); err != nil {
 		return err
@@ -60,11 +64,11 @@ func validateNewVolume(project string, size string, pvcName string, mode string,
 }
 
 func createNewVolume(project string, username string, size string, pvcName string, mode string) error {
-	//if pvName, err := createGlusterVolume(project, size, username); err != nil {
-	//	return err
-	//}
+	pvName, err := createGlusterVolume(project, size, username);
+	if (err != nil) {
+		return err
+	}
 
-	pvName := "test_pv5"
 	if err := createOpenShiftPV(size, pvName, mode, username); err != nil {
 		return err
 	}
@@ -74,6 +78,12 @@ func createNewVolume(project string, username string, size string, pvcName strin
 	}
 
 	// Create Gluster Service & Endpoints in user project
+	if err := createOpenShiftGlusterService(project, username); err != nil {
+		return err
+	}
+	if err := createOpenShiftGlusterEndpoint(project, username); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -108,12 +118,12 @@ func createGlusterVolume(project string, size string, username string) (string, 
 		}
 
 		return json.Path("message").Data().(string), nil
-	} else {
-		errMsg, _ := ioutil.ReadAll(resp.Body)
-		log.Println("Error creating gluster volume:", err, resp.StatusCode, string(errMsg))
-
-		return "", fmt.Errorf("Fehlerhafte Antwort vom Gluster-API: %v", string(errMsg))
 	}
+
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error creating gluster volume:", err, resp.StatusCode, string(errMsg))
+
+	return "", fmt.Errorf("Fehlerhafte Antwort vom Gluster-API: %v", string(errMsg))
 }
 
 func createOpenShiftPV(size string, pvName string, mode string, username string) error {
@@ -138,7 +148,7 @@ func createOpenShiftPV(size string, pvName string, mode string, username string)
 	}
 
 	if resp.StatusCode == http.StatusCreated {
-		log.Printf("Created the pv %v because of the request of %v", pvName, username)
+		log.Printf("Created the pv %v based on the request of %v", pvName, username)
 		return nil
 	}
 
@@ -165,7 +175,7 @@ func createOpenShiftPVC(project string, size string, pvcName string, mode string
 	}
 
 	if resp.StatusCode == http.StatusCreated {
-		log.Printf("Created the pvc %v because of the request of %v", pvcName, username)
+		log.Printf("Created the pvc %v based on the request of %v", pvcName, username)
 		return nil
 	}
 
@@ -173,4 +183,99 @@ func createOpenShiftPVC(project string, size string, pvcName string, mode string
 	log.Println("Error creating new PVC:", err, resp.StatusCode, string(errMsg))
 
 	return errors.New(genericAPIError)
+}
+
+func createOpenShiftGlusterService(project string, username string) error {
+	p := newObjectRequest("Service", "glusterfs-cluster")
+
+	port := gabs.New()
+	port.Set(1, "port")
+
+	p.ArrayP("spec.ports")
+	p.ArrayAppendP(port.Data(), "spec.ports")
+
+	client, req := getOseHTTPClient("POST",
+		"api/v1/namespaces/"+project+"/services",
+		bytes.NewReader(p.Bytes()))
+
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+
+	if resp.StatusCode == http.StatusCreated {
+		log.Printf("Created the gluster service based on the request of %v", username)
+		return nil
+	}
+
+	if (resp.StatusCode == http.StatusConflict) {
+		log.Println("Gluster service already existed, skipping")
+		return nil
+	}
+
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error creating gluster service:", err, resp.StatusCode, string(errMsg))
+
+	return errors.New(genericAPIError)
+}
+
+func createOpenShiftGlusterEndpoint(project string, username string) error {
+	p, err := getGlusterEndpointsContainer()
+	if (err != nil) {
+		return err
+	}
+
+	client, req := getOseHTTPClient("POST",
+		"api/v1/namespaces/"+project+"/endpoints",
+		bytes.NewReader(p.Bytes()))
+
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+
+	if resp.StatusCode == http.StatusCreated {
+		log.Printf("Created the gluster endpoints based on the request of %v", username)
+		return nil
+	}
+
+	if (resp.StatusCode == http.StatusConflict) {
+		log.Println("Gluster endpoints already existed, skipping")
+		return nil
+	}
+
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error creating gluster endpoints:", err, resp.StatusCode, string(errMsg))
+
+	return errors.New(genericAPIError)
+}
+
+func getGlusterEndpointsContainer() (*gabs.Container, error) {
+	p := newObjectRequest("Endpoints", "glusterfs-cluster")
+	p.Array("subsets")
+
+	// Add gluster endpoints
+	glusterIPs := os.Getenv("GLUSTER_IPS")
+	if (len(glusterIPs) == 0) {
+		log.Println("Wrong configuration. Missing env variable 'GLUSTER_IPS'")
+		return nil, errors.New(genericAPIError)
+	}
+
+	addresses := gabs.New()
+	addresses.Array("addresses")
+	addresses.Array("ports")
+	for _, ip := range strings.Split(glusterIPs, ",") {
+		address := gabs.New()
+		address.Set(ip, "ip")
+
+		addresses.ArrayAppend(address.Data(), "addresses")
+	}
+
+	port := gabs.New()
+	port.Set(1, "port")
+	addresses.ArrayAppend(port.Data(), "ports")
+
+	p.ArrayAppend(addresses.Data(), "subsets")
+
+	return p, nil
 }
