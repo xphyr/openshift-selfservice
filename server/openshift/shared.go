@@ -22,7 +22,8 @@ const (
 	updateBillingURL     = "updatebilling.html"
 	newServiceAccountURL = "newserviceaccount.html"
 	newVolumeURL         = "newvolume.html"
-	fixVolumeURL		 = "fixvolume.html"
+	fixVolumeURL         = "fixvolume.html"
+	growVolumeURL        = "growvolume.html"
 	genericAPIError      = "Fehler beim Aufruf der OpenShift-API"
 )
 
@@ -71,6 +72,12 @@ func RegisterRoutes(r *gin.RouterGroup) {
 		c.HTML(http.StatusOK, fixVolumeURL, gin.H{})
 	})
 	r.POST("/openshift/fixvolume", fixVolumeHandler)
+
+	// growVolume
+	r.GET("/openshift/growvolume", func(c *gin.Context) {
+		c.HTML(http.StatusOK, growVolumeURL, gin.H{})
+	})
+	r.POST("/openshift/growvolume", growVolumeHandler)
 }
 
 func checkAdminPermissions(username string, project string) error {

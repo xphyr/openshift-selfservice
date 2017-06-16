@@ -72,40 +72,56 @@ func fixVolumeHandler(c *gin.Context) {
 	}
 }
 
+func growVolumeHandler(c *gin.Context) {
+	project := c.PostForm("project")
+	growSize := strings.ToUpper(c.PostForm("growsize"))
+	pvName := c.PostForm("pvname")
+	username := common.GetUserName(c)
+
+	if err := validateGrowVolume(project, growSize, pvName, username); err != nil {
+		c.HTML(http.StatusOK, growVolumeURL, gin.H{
+			"Error": err.Error(),
+		})
+		return
+	}
+
+	if err := growExistingVolume(project, growSize, pvName, username); err != nil {
+		c.HTML(http.StatusOK, growVolumeURL, gin.H{
+			"Error": err.Error(),
+		})
+	} else {
+		c.HTML(http.StatusOK, growVolumeURL, gin.H{
+			"Success": "Das Volume wurde vergrössert.",
+		})
+	}
+}
+
 func validateNewVolume(project string, size string, pvcName string, mode string, username string) error {
 	// Required fields
 	if len(project) == 0 || len(pvcName) == 0 || len(size) == 0 || len(mode) == 0 {
 		return errors.New("Es müssen alle Felder ausgefüllt werden")
 	}
 
-	// Size limits
-	maxMB, maxGB := getMaxSizes()
-	sizeOk := false
-	if strings.HasSuffix(size, "M") {
-		sizeInt, err := strconv.Atoi(strings.Replace(size, "M", "", 1))
-		if err != nil {
-			return fmt.Errorf(wrongSizeError, maxMB, maxGB)
-		}
-
-		if sizeInt <= maxMB {
-			sizeOk = true
-		} else {
-			return errors.New("Deine Angaben sind zu gross für 'M'. Bitte gib die Grösse als Ganzzahl in 'G' an")
-		}
-	}
-	if strings.HasSuffix(size, "G") {
-		sizeInt, err := strconv.Atoi(strings.Replace(size, "G", "", 1))
-		if err != nil {
-			return fmt.Errorf(wrongSizeError, maxMB, maxGB)
-		}
-
-		if sizeInt <= maxGB {
-			sizeOk = true
-		}
+	if err := validateMaxSize(size); err != nil {
+		return err
 	}
 
-	if !sizeOk {
-		return fmt.Errorf(wrongSizeError, maxMB, maxGB)
+	// Permissions on project
+	if err := checkAdminPermissions(username, project); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateGrowVolume(project string, growSize string, pvName string, username string) error {
+	// Required fields
+	if len(project) == 0 || len(pvName) == 0 || len(growSize) == 0 {
+		return errors.New("Es müssen alle Felder ausgefüllt werden")
+	}
+
+	if err := validateMaxSize(growSize); err != nil {
+		return err
 	}
 
 	// Permissions on project
@@ -129,7 +145,7 @@ func validateFixVolume(project string, username string) error {
 	return nil
 }
 
-func getMaxSizes() (int, int) {
+func validateMaxSize(size string) error {
 	maxMB := os.Getenv("MAX_MB")
 	maxGB := os.Getenv("MAX_GB")
 
@@ -139,7 +155,30 @@ func getMaxSizes() (int, int) {
 	if errMB != nil || errGB != nil || maxMBInt <= 0 || maxGBInt <= 0 {
 		log.Fatal("Env variables 'MAX_MB' and 'MAX_GB' must be specified and a valid integer")
 	}
-	return maxMBInt, maxGBInt
+
+	// Size limits
+	if strings.HasSuffix(size, "M") {
+		sizeInt, err := strconv.Atoi(strings.Replace(size, "M", "", 1))
+		if err != nil {
+			return fmt.Errorf(wrongSizeError, maxMB, maxGB)
+		}
+
+		if sizeInt > maxMBInt {
+			return errors.New("Deine Angaben sind zu gross für 'M'. Bitte gib die Grösse als Ganzzahl in 'G' an")
+		}
+	}
+	if strings.HasSuffix(size, "G") {
+		sizeInt, err := strconv.Atoi(strings.Replace(size, "G", "", 1))
+		if err != nil {
+			return fmt.Errorf(wrongSizeError, maxMB, maxGB)
+		}
+
+		if sizeInt > maxGBInt {
+			return fmt.Errorf(wrongSizeError, maxMB, maxGB)
+		}
+	}
+
+	return nil
 }
 
 func createNewVolume(project string, username string, size string, pvcName string, mode string) error {
@@ -206,11 +245,49 @@ func createGlusterVolume(project string, size string, username string) (string, 
 	return "", fmt.Errorf("Fehlerhafte Antwort vom Gluster-API: %v", string(errMsg))
 }
 
+func growExistingVolume(project string, growSize string, pvName string, username string) error {
+	// Renaming Rules:
+	// OpenShift cannot use _ in names. Thus the pvName will be gl-<project>-pv<number>
+	// 1. Remove gl-
+	// 2. Change -pv to _pv
+	cmd := models.GrowVolumeCommand{
+		PvName:   strings.Replace(strings.Replace(pvName, "gl-", "", 1), "-pv", "_pv", 1),
+		GrowSize: growSize,
+	}
+
+	b := new(bytes.Buffer)
+	if err := json.NewEncoder(b).Encode(cmd); err != nil {
+		log.Println(err.Error())
+		return errors.New(genericAPIError)
+	}
+
+	client, req := getGlusterHTTPClient("sec/volume/grow", b)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("%v grew gluster volume. Project: %v, growSize: %v", username, project, growSize)
+		return nil
+	}
+
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error growing gluster volume:", err, resp.StatusCode, string(errMsg))
+
+	return fmt.Errorf("Fehlerhafte Antwort vom Gluster-API: %v", string(errMsg))
+}
+
 func createOpenShiftPV(size string, pvName string, mode string, username string) error {
+	// The Volume will use _ in the name, OpenShift can't, so we change it to -
 	p := newObjectRequest("PersistentVolume", strings.Replace(pvName, "_", "-", -1))
 
 	p.SetP(size, "spec.capacity.storage")
 	p.SetP("glusterfs-cluster", "spec.glusterfs.endpoints")
+
+	// The gluster volume starts with vol_ instead of gl_
 	p.SetP(strings.Replace(pvName, "gl_", "vol_", 1), "spec.glusterfs.path")
 	p.SetP(false, "spec.glusterfs.readOnly")
 	p.SetP("Retain", "spec.persistentVolumeReclaimPolicy")
