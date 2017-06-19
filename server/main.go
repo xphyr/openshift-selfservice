@@ -1,7 +1,11 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"os"
+
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/oscp/openshift-selfservice/server/common"
@@ -9,9 +13,15 @@ import (
 )
 
 func main() {
+	// select directoy for translated web pages
+	lang := strings.ToLower(os.Getenv("I18N_LANG"))
+	if len(lang) == 0 {
+		log.Fatal("Env variable 'I18N_LANG' must be specified")
+	}
+
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.LoadHTMLGlob("templates/*")
+	router.LoadHTMLGlob("templates/" + lang + "/*")
 
 	// Public routes
 	authMiddleware := common.GetAuthMiddleware()
@@ -43,6 +53,3 @@ func main() {
 
 	router.Run()
 }
-
-
-

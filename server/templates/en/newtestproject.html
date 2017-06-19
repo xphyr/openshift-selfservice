@@ -1,0 +1,27 @@
+{{ template "header.html" . }}
+
+<div class="jumbotron">
+    <h1><span class="fa fa-lock"></span> Create OpenShift Test Project</h1>
+    <p>Hier kannst du ein OpenShift Test-Projekt erstellen</p>
+</div>
+
+<div class="alert alert-info">
+    - You can always create a test project to try something out. It will not be charged.<br/>
+    - A test project contains your u number<br/>
+    - Pods from a test project can be stopped at any time by the cloud team<br/>
+    - Please delete the test project itself after testing<br/>
+    - Non-deleted test projects are deleted by the cloud team<br/>
+</div>
+
+<form method="post">
+    <div class="form-group">
+        <label for="project">Project Name</label>
+        <div class="input-group">
+            <span class="input-group-addon" id="basic-addon1">{{ .User}}-</span>
+            <input type="text" class="form-control" required id="project" name="project" placeholder="testprojekt">
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Create test project</button>
+</form>
+
+{{ template "footer.html" . }}

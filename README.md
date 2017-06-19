@@ -75,6 +75,7 @@ Just create a 'oc new-app' from the dockerfile.
 ## Parameters
 **Param**|**Description**|**Example**
 :-----:|:-----:|:-----:
+I18N\_LANG|Language Selection|DE or EN
 LDAP\_URL|Your LDAP|ldap.xzw.ch
 LDAP\_BIND\_DN|LDAP Bind|cn=root
 LDAP\_BIND\_CRED|LDAP Credentials|secret

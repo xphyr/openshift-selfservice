@@ -1,0 +1,24 @@
+{{ template "header.html" . }}
+
+<div class="jumbotron">
+    <h1><span class="fa fa-lock"></span> Adjust Project Quotas</h1>
+    <p>Here you can adjust the CPU / memory quotas of your project. All adjustments are logged.</p>
+</div>
+
+<form method="post">
+    <div class="form-group">
+        <label for="project">Project Name</label>
+        <input type="text" class="form-control" required id="project" name="project" placeholder="projektname-dev">
+    </div>
+    <div class="form-group">
+        <label for="cpu">New CPU Quotas [Cores]</label>
+        <input type="number" min="0" class="form-control" required id="cpu" name="cpu" value="2">
+    </div>
+    <div class="form-group">
+        <label for="memory">New Memory Quotas [GB]</label>
+        <input type="number" min="0" class="form-control" required id="memory" name="memory" value="4">
+    </div>
+    <button type="submit" class="btn btn-primary">Quotas</button>
+</form>
+
+{{ template "footer.html" . }}
