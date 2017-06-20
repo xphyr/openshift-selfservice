@@ -1,15 +1,16 @@
 package openshift
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/oscp/openshift-selfservice/server/common"
-	"net/http"
-	"encoding/json"
 	"bytes"
-	"log"
+	"errors"
 	"io/ioutil"
+	"log"
+	"net/http"
 	"strings"
-	"github.com/oscp/openshift-selfservice/server/models"
+
+	"github.com/Jeffail/gabs"
+	"github.com/gin-gonic/gin"
+	"github.com/oscp/cloud-selfservice-portal/server/common"
 )
 
 func newProjectHandler(c *gin.Context) {
@@ -18,22 +19,20 @@ func newProjectHandler(c *gin.Context) {
 	megaid := c.PostForm("megaid")
 	username := common.GetUserName(c)
 
-	isOk, msg := validateNewProject(project, billing, false)
-	if (!isOk) {
-		c.HTML(http.StatusOK, newProjectUrl, gin.H{
-			"Error": msg,
+	if err := validateNewProject(project, billing, false); err != nil {
+		c.HTML(http.StatusOK, newProjectURL, gin.H{
+			"Error": err.Error(),
 		})
 		return
 	}
 
-	isOk, msg = createNewProject(project, username, billing, megaid)
-	if (!isOk) {
-		c.HTML(http.StatusOK, newProjectUrl, gin.H{
-			"Error": msg,
+	if err := createNewProject(project, username, billing, megaid); err != nil {
+		c.HTML(http.StatusOK, newProjectURL, gin.H{
+			"Error": err.Error(),
 		})
 	} else {
-		c.HTML(http.StatusOK, newProjectUrl, gin.H{
-			"Success": msg,
+		c.HTML(http.StatusOK, newProjectURL, gin.H{
+			"Success": "Das Projekt wurde erstellt",
 		})
 	}
 }
@@ -46,24 +45,22 @@ func newTestProjectHandler(c *gin.Context) {
 	billing := "keine-verrechnung"
 	project = username + "-" + project
 
-	isOk, msg := validateNewProject(project, billing, true)
-	if (!isOk) {
-		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
-			"Error": msg,
-			"User": common.GetUserName(c),
+	if err := validateNewProject(project, billing, true); err != nil {
+		c.HTML(http.StatusOK, newTestProjectURL, gin.H{
+			"Error": err.Error(),
+			"User":  common.GetUserName(c),
 		})
 		return
 	}
-	isOk, msg = createNewProject(project, username, billing, "")
-	if (!isOk) {
-		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
-			"Error": msg,
-			"User": common.GetUserName(c),
+	if err := createNewProject(project, username, billing, ""); err != nil {
+		c.HTML(http.StatusOK, newTestProjectURL, gin.H{
+			"Error": err.Error(),
+			"User":  common.GetUserName(c),
 		})
 	} else {
-		c.HTML(http.StatusOK, newTestProjectUrl, gin.H{
-			"Success": msg,
-			"User": common.GetUserName(c),
+		c.HTML(http.StatusOK, newTestProjectURL, gin.H{
+			"Success": "Das Test-Projekt wurde erstellt",
+			"User":    common.GetUserName(c),
 		})
 	}
 }
@@ -73,188 +70,168 @@ func updateBillingHandler(c *gin.Context) {
 	project := c.PostForm("project")
 	billing := c.PostForm("billing")
 
-	isOk, msg := validateBillingInformation(project, billing, username)
-	if (!isOk) {
-		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
-			"Error": msg,
+	if err := validateBillingInformation(project, billing, username); err != nil {
+		c.HTML(http.StatusOK, updateBillingURL, gin.H{
+			"Error": err.Error(),
 		})
 		return
 	}
 
-	isOk, msg = createOrUpdateMetadata(project, billing, "", username)
-	if (!isOk) {
-		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
-			"Error": msg,
+	if err := createOrUpdateMetadata(project, billing, "", username); err != nil {
+		c.HTML(http.StatusOK, updateBillingURL, gin.H{
+			"Error": err.Error(),
 		})
 	} else {
-		c.HTML(http.StatusOK, updateBillingUrl, gin.H{
+		c.HTML(http.StatusOK, updateBillingURL, gin.H{
 			"Success": "Die neuen Daten wurden gespeichert",
 		})
 	}
 }
 
-func validateNewProject(project string, billing string, isTestproject bool) (bool, string) {
-	if (len(project) == 0) {
-		return false, "Projektname muss angegeben werden"
+func validateNewProject(project string, billing string, isTestproject bool) error {
+	if len(project) == 0 {
+		return errors.New("Projektname muss angegeben werden")
 	}
 
-	if (!isTestproject && len(billing) == 0) {
-		return false, "Kontierungsnummer muss angegeben werden"
+	if !isTestproject && len(billing) == 0 {
+		return errors.New("Kontierungsnummer muss angegeben werden")
 	}
 
-	return true, ""
+	return nil
 }
 
-func validateBillingInformation(project string, billing string, username string) (bool, string) {
-	if (len(project) == 0) {
-		return false, "Projektname muss angegeben werden"
+func validateBillingInformation(project string, billing string, username string) error {
+	if len(project) == 0 {
+		return errors.New("Projektname muss angegeben werden")
 	}
 
-	if (len(billing) == 0) {
-		return false, "Kontierungsnummer muss angegeben werden"
+	if len(billing) == 0 {
+		return errors.New("Kontierungsnummer muss angegeben werden")
 	}
 
 	// Validate permissions
-	isOk, msg := checkAdminPermissions(username, project)
-	if (!isOk) {
-		return false, msg
+	if err := checkAdminPermissions(username, project); err != nil {
+		return err
 	}
 
-	return true, ""
+	return nil
 }
 
-func createNewProject(project string, username string, billing string, megaid string) (bool, string) {
-	p := models.NewObjectRequest{
-		APIVersion: "v1",
-		Kind: "ProjectRequest",
-		Metadata: models.Metadata{Name: project, },
-	}
+func createNewProject(project string, username string, billing string, megaid string) error {
+	p := newObjectRequest("ProjectRequest", project)
 
-	e, err := json.Marshal(p)
-	if (err != nil) {
-		log.Println("error encoding json:", err)
-		return false, genericApiError
-	}
-
-	client, req := getOseHttpClient("POST",
+	client, req := getOseHTTPClient("POST",
 		"oapi/v1/projectrequests",
-		bytes.NewReader(e))
+		bytes.NewReader(p.Bytes()))
 
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
-
-	if (resp.StatusCode == http.StatusCreated) {
-		log.Print(username + " created a new project: " + project)
-
-	isOk, msg := changeProjectPermission(project, username)
-	if (!isOk) {
-		return isOk, msg
+	if err == nil {
+		defer resp.Body.Close()
 	}
 
-	isOk, msg = createOrUpdateMetadata(project, billing, megaid, username)
-	if (!isOk) {
-		return isOk, msg
-	} else {
-		return true, "Das neue Projekt wurde erstellt"
-	}
-	} else {
-		if (resp.StatusCode == http.StatusConflict) {
-			return false, "Das Projekt existiert bereits"
+	if resp.StatusCode == http.StatusCreated {
+		log.Printf("%v created a new project: %v", username, project)
+
+		if err := changeProjectPermission(project, username); err != nil {
+			return err
 		}
 
-		errMsg, _ := ioutil.ReadAll(resp.Body)
-		log.Println("Error creating new project:", err, resp.StatusCode, string(errMsg))
-
-		return false, genericApiError
+		if err := createOrUpdateMetadata(project, billing, megaid, username); err != nil {
+			return err
+		}
+		return nil
 	}
+	if resp.StatusCode == http.StatusConflict {
+		return errors.New("Das Projekt existiert bereits")
+	}
+
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error creating new project:", err, resp.StatusCode, string(errMsg))
+
+	return errors.New(genericAPIError)
 }
 
-func changeProjectPermission(project string, username string) (bool, string) {
+func changeProjectPermission(project string, username string) error {
 	// Get existing policybindings
-	policyBindings, msg := getPolicyBindings(project)
+	policyBindings, err := getPolicyBindings(project)
 
-	if (policyBindings == nil) {
-		return false, msg
+	if policyBindings == nil {
+		return err
 	}
 
-	for idx, r := range policyBindings.RoleBindings {
-		if (r.Name == "admin") {
-			policyBindings.RoleBindings[idx].RoleBinding.UserNames = append(r.RoleBinding.UserNames, strings.ToLower(username), strings.ToUpper(username))
+	children, err := policyBindings.S("roleBindings").Children()
+	if err != nil {
+		log.Println("Unable to parse roleBindings", err.Error())
+		return errors.New(genericAPIError)
+	}
+	for _, v := range children {
+		if v.Path("name").Data().(string) == "admin" {
+			v.ArrayAppend(strings.ToLower(username), "roleBinding", "userNames")
+			v.ArrayAppend(strings.ToUpper(username), "roleBinding", "userNames")
 		}
-	}
-
-	e, err := json.Marshal(policyBindings)
-	if (err != nil) {
-		log.Println("error encoding json:", err)
-		return false, genericApiError
 	}
 
 	// Update the policyBindings on the api
-	client, req := getOseHttpClient("PUT",
-		"oapi/v1/namespaces/" + project + "/policybindings/:default",
-		bytes.NewReader(e))
+	client, req := getOseHTTPClient("PUT",
+		"oapi/v1/namespaces/"+project+"/policybindings/:default",
+		bytes.NewReader(policyBindings.Bytes()))
 
 	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error from server: ", err.Error())
+		return errors.New(genericAPIError)
+	}
+
 	defer resp.Body.Close()
 
-	if (err != nil) {
-		log.Println("Error from server: ", err.Error())
-		return false, genericApiError
+	if resp.StatusCode == http.StatusOK {
+		log.Print(username + " is now admin of " + project)
+		return nil
 	}
 
-	if (resp.StatusCode == http.StatusOK) {
-		log.Print(username + " is now admin of " + project)
-		return true, ""
-	} else {
-		errMsg, _ := ioutil.ReadAll(resp.Body)
-		log.Println("Error updating project permissions:", err, resp.StatusCode, string(errMsg))
-		return false, genericApiError
-	}
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error updating project permissions:", err, resp.StatusCode, string(errMsg))
+	return errors.New(genericAPIError)
 }
 
-func createOrUpdateMetadata(project string, billing string, megaid string, username string) (bool, string) {
-	client, req := getOseHttpClient("GET", "api/v1/namespaces/" + project, nil)
+func createOrUpdateMetadata(project string, billing string, megaid string, username string) error {
+	client, req := getOseHTTPClient("GET", "api/v1/namespaces/"+project, nil)
 	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error from server: ", err.Error())
+		return errors.New(genericAPIError)
+	}
+
 	defer resp.Body.Close()
 
-	if (err != nil) {
-		log.Println("Error from server: ", err.Error())
-		return false, genericApiError
-	}
-
-	projectConfig := models.ProjectResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(&projectConfig); err != nil {
+	json, err := gabs.ParseJSONBuffer(resp.Body)
+	if err != nil {
 		log.Println("error decoding json:", err, resp.StatusCode)
-		return false, genericApiError
+		return errors.New(genericAPIError)
 	}
 
-	projectConfig.Metadata.Annotations.BillingNr = billing
-	projectConfig.Metadata.Annotations.Requester = username
+	annotations := json.Path("metadata.annotations")
+	annotations.Set(billing, "openshift.io/kontierung-element")
+	annotations.Set(username, "openshift.io/requester")
 
-	if (len(megaid) > 0) {
-		projectConfig.Metadata.Annotations.MegaId = megaid
+	if len(megaid) > 0 {
+		annotations.Set(megaid, "openshift.io/MEGAID")
 	}
 
-	e, err := json.Marshal(projectConfig)
-	if (err != nil) {
-		log.Println("error encoding json:", err)
-		return false, genericApiError
-	}
-
-	client, req = getOseHttpClient("PUT",
-		"api/v1/namespaces/" + project,
-		bytes.NewReader(e))
+	client, req = getOseHTTPClient("PUT",
+		"api/v1/namespaces/"+project,
+		bytes.NewReader(json.Bytes()))
 
 	resp, err = client.Do(req)
-	defer resp.Body.Close()
 
-	if (resp.StatusCode == http.StatusOK) {
-		log.Println("User " + username + " changed changed config of project project " + project + ". Kontierungsnummer: " + billing, ", MegaID: " + megaid)
-		return true, ""
-	} else {
-		errMsg, _ := ioutil.ReadAll(resp.Body)
-		log.Println("Error updating project config:", err, resp.StatusCode, string(errMsg))
-
-		return false, genericApiError
+	if resp.StatusCode == http.StatusOK {
+		resp.Body.Close()
+		log.Println("User "+username+" changed changed config of project project "+project+". Kontierungsnummer: "+billing, ", MegaID: "+megaid)
+		return nil
 	}
+
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error updating project config:", err, resp.StatusCode, string(errMsg))
+
+	return errors.New(genericAPIError)
 }

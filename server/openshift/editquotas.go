@@ -1,15 +1,16 @@
 package openshift
 
 import (
-	"encoding/json"
 	"bytes"
-	"net/http"
-	"github.com/gin-gonic/gin"
-	"os"
-	"github.com/oscp/openshift-selfservice/server/common"
-	"log"
-	"github.com/oscp/openshift-selfservice/server/models"
+	"errors"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/Jeffail/gabs"
+	"github.com/gin-gonic/gin"
+	"github.com/oscp/cloud-selfservice-portal/server/common"
 )
 
 func editQuotasHandler(c *gin.Context) {
@@ -18,91 +19,86 @@ func editQuotasHandler(c *gin.Context) {
 	memory := c.PostForm("memory")
 	username := common.GetUserName(c)
 
-	isOk, msg := validateEditQuotas(username, project, cpu, memory)
-
-	if (!isOk) {
-		c.HTML(http.StatusOK, editQuotasUrl, gin.H{
-			"Error": msg,
+	if err := validateEditQuotas(username, project, cpu, memory); err != nil {
+		c.HTML(http.StatusOK, editQuotasURL, gin.H{
+			"Error": err.Error(),
 		})
 		return
 	}
 
-	isOk, msg = updateQuotas(username, project, cpu, memory)
+	if err := updateQuotas(username, project, cpu, memory); err != nil {
+		c.HTML(http.StatusOK, editQuotasURL, gin.H{
+			"Error": err.Error(),
+		})
+		return
+	}
 
-	c.HTML(http.StatusOK, editQuotasUrl, gin.H{
+	c.HTML(http.StatusOK, editQuotasURL, gin.H{
 		"Success": "Die neuen Quotas wurden gespeichert",
 	})
 }
 
-func validateEditQuotas(username string, project string, cpu string, memory string) (bool, string) {
+func validateEditQuotas(username string, project string, cpu string, memory string) error {
 	maxCPU := os.Getenv("MAX_CPU")
 	maxMemory := os.Getenv("MAX_MEMORY")
 
-	if (len(maxCPU) == 0 || len(maxMemory) == 0) {
+	if len(maxCPU) == 0 || len(maxMemory) == 0 {
 		log.Fatal("Env variables 'MAX_MEMORY' and 'MAX_CPU' must be specified")
 	}
 
 	// Validate user input
-	if (len(project) == 0) {
-		return false, "Projekt muss angegeben werden"
+	if len(project) == 0 {
+		return errors.New("Projekt muss angegeben werden")
 	}
-	isOk, msg := common.ValidateIntInput(maxCPU, cpu)
-	if (!isOk) {
-		return false, msg
+	if err := common.ValidateIntInput(maxCPU, cpu); err != nil {
+		return err
 	}
-	isOk, msg = common.ValidateIntInput(maxMemory, memory)
-	if (!isOk) {
-		return false, msg
+	if err := common.ValidateIntInput(maxMemory, memory); err != nil {
+		return err
 	}
 
 	// Validate permissions
-	isOk, msg = checkAdminPermissions(username, project)
-	if (!isOk) {
-		return false, msg
+	if err := checkAdminPermissions(username, project); err != nil {
+		return err
 	}
 
-	return true, ""
+	return nil
 }
 
-func updateQuotas(username string, project string, cpu string, memory string) (bool, string) {
-	client, req := getOseHttpClient("GET", "api/v1/namespaces/" + project + "/resourcequotas", nil)
+func updateQuotas(username string, project string, cpu string, memory string) error {
+	client, req := getOseHTTPClient("GET", "api/v1/namespaces/"+project+"/resourcequotas", nil)
 	resp, err := client.Do(req)
+
+	if err != nil {
+		log.Println("Error from server: ", err.Error())
+		return errors.New(genericAPIError)
+	}
 	defer resp.Body.Close()
 
-	if (err != nil) {
-		log.Println("Error from server: ", err.Error())
-		return false, genericApiError
-	}
-
-	var existingQuotas models.ResourceQuotaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&existingQuotas); err != nil {
+	json, err := gabs.ParseJSONBuffer(resp.Body)
+	if err != nil {
 		log.Println("error decoding json:", err, resp.StatusCode)
-		return false, genericApiError
+		return errors.New(genericAPIError)
 	}
 
-	existingQuotas.Items[0].Spec.Hard.CPU = cpu
-	existingQuotas.Items[0].Spec.Hard.Memory = memory + "Gi"
+	firstQuota := json.S("items").Index(0)
 
-	e, err := json.Marshal(existingQuotas.Items[0])
-	if (err != nil) {
-		log.Println("error encoding json:", err)
-		return false, genericApiError
-	}
+	firstQuota.SetP(cpu, "spec.hard.cpu")
+	firstQuota.SetP(memory+"Gi", "spec.hard.memory")
 
-	client, req = getOseHttpClient("PUT",
-		"api/v1/namespaces/" + project + "/resourcequotas/" + existingQuotas.Items[0].Metadata.Name,
-		bytes.NewReader(e))
+	client, req = getOseHTTPClient("PUT",
+		"api/v1/namespaces/"+project+"/resourcequotas/"+firstQuota.Path("metadata.name").Data().(string),
+		bytes.NewReader(firstQuota.Bytes()))
 
 	resp, err = client.Do(req)
-	defer resp.Body.Close()
-
-	if (resp.StatusCode == http.StatusOK) {
-		log.Println("User " + username + " changed quotas for the project " + project + ". CPU: " + cpu, ", Mem: " + memory)
-		return true, ""
-	} else {
-		errMsg, _ := ioutil.ReadAll(resp.Body)
-		log.Println("Error updating resourceQuota:", err, resp.StatusCode, string(errMsg))
-
-		return false, genericApiError
+	if err == nil && resp.StatusCode == http.StatusOK {
+		defer resp.Body.Close()
+		log.Println("User "+username+" changed quotas for the project "+project+". CPU: "+cpu, ", Mem: "+memory)
+		return nil
 	}
+
+	errMsg, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Error updating resourceQuota:", err.Error(), resp.StatusCode, string(errMsg))
+
+	return errors.New(genericAPIError)
 }
