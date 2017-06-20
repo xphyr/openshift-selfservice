@@ -1,0 +1,16 @@
+{{ template "header.html" . }}
+
+<div class="jumbotron">
+    <h1><span class="fa fa-chain-broken"></span> Create Gluster Configuration</h1>
+    <p>This function creates the Gluster objects (service & endpoints) in your project</p>
+</div>
+
+<form method="post">
+    <div class="form-group">
+        <label for="project">Project Name</label>
+        <input type="text" class="form-control" required id="project" name="project" placeholder="projektname-dev">
+    </div>
+    <button type="submit" class="btn btn-primary">Create Gluster objects</button>
+</form>
+
+{{ template "footer.html" . }}

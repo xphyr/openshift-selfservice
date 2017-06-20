@@ -1,0 +1,29 @@
+{{ template "header.html" . }}
+
+<div class="jumbotron">
+    <h1><span class="fa fa-plus-square"></span> Increase Persistent Volume</h1>
+    <p>Here you can grow a Persistent Volume</p>
+</div>
+
+<form method="post" onsubmit="spinner();">
+    <div class="form-group">
+        <label for="project">Project Name</label>
+        <input type="text" class="form-control" required id="project" name="project" placeholder="projektname-dev">
+    </div>
+    <div class="form-group">
+        <label for="growsize">Add Size</label>
+        <p><em>The amount to be added to the existing volume size. e.g. 100M or 5G</em></p>
+        <input type="text" class="form-control" required id="growsize" name="growsize" placeholder="100M">
+    </div>
+    <div class="form-group">
+        <label for="pvname">Name of the Persistent Volumes</label>
+        <p><em>Not the name of the PVC, but what is written under "Storage> column status> bold"</em></p>
+        <input type="text" class="form-control" required id="pvname" name="pvname">
+    </div>
+    <button type="submit" id="submitBtn" class="btn btn-primary">Grow Persistent Volume</button>
+
+    {{ template "spinner.html" . }}
+
+</form>
+
+{{ template "footer.html" . }}
